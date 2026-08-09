@@ -26,13 +26,17 @@ import { execCmd } from './utilsAPI';
 async function changeCryptPassword(newPassword: string, oldPassword: string, confirmPassword: string): Promise<string> {
     let crypt_drives: IDrive[] = await DriveController.getDrives();
     crypt_drives = crypt_drives.filter((x: IDrive): boolean => x.crypt);
-    // todo: rename variable
+    const escapeSingleQuotes = (str: string): string => str.replace(/'/g, "'\\''");
+    const escapedOld: string = escapeSingleQuotes(oldPassword);
+    const escapedNew: string = escapeSingleQuotes(newPassword);
+    const escapedConfirm: string = escapeSingleQuotes(confirmPassword);
+
     let oneliner: string = '';
     for (const drive of crypt_drives) {
-        oneliner += `printf '%s\\n' '${oldPassword}' | /usr/sbin/cryptsetup open --type luks -q --test-passphrase ${drive.devPath} && `;
+        oneliner += `printf '%s\\n' '${escapedOld}' | /usr/sbin/cryptsetup open --type luks -q --test-passphrase ${drive.devPath} && `;
     }
     for (const drive of crypt_drives) {
-        oneliner += `printf '%s\\n' '${oldPassword}' '${newPassword}' '${confirmPassword}' | /usr/sbin/cryptsetup -q luksChangeKey --force-password ${drive.devPath} && `;
+        oneliner += `printf '%s\\n' '${escapedOld}' '${escapedNew}' '${escapedConfirm}' | /usr/sbin/cryptsetup -q luksChangeKey --force-password ${drive.devPath} && `;
     }
     oneliner = oneliner.slice(0, -4); // remove the tailing " && "
     return await execCmd(`pkexec /bin/sh -c "${oneliner}"`);
