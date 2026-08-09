@@ -52,8 +52,8 @@ export class DisplayRefreshRateWorker extends DaemonWorker {
 
     // user is able to switch XDG_SESSION_TYPE in login screen and thus a new check needs to be done
     // not checking XDG_SESSION_TYPE during login screen, checking again on user change
-    private checkUsers(): boolean[] {
-        const userInformation: string[] = child_process.execSync('w --no-header').toString().split('\n');
+    private async checkUsers(): Promise<boolean[]> {
+        const userInformation: string[] = (await execCommandAsync('w --no-header')).split('\n');
 
         const loggedInUsers: string[] = [];
 
@@ -88,7 +88,7 @@ export class DisplayRefreshRateWorker extends DaemonWorker {
             return;
         }
 
-        const [usersAvailable, usersChanged] = this.checkUsers();
+        const [usersAvailable, usersChanged] = await this.checkUsers();
 
         if (usersChanged) {
             this.resetToDefault();
