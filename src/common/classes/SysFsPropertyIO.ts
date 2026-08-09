@@ -183,7 +183,7 @@ export abstract class SysFsPropertyIO<T> implements ISysFsProperty {
         if (this.readPath === this.writePath) {
             return [fs.watch(this.readPath, listener)];
         } else {
-            return [fs.watch(this.readPath, listener), fs.watch(this.readPath, listener)];
+            return [fs.watch(this.readPath, listener), fs.watch(this.writePath, listener)];
         }
     }
 }
