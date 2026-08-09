@@ -118,20 +118,47 @@ export const webcamHandlers: Map<string, (...args: any[]) => any> = new Map<stri
     })
 
     .set(WebcamAPIFunctions.getSelectedWebcamSettings, (selectedWebcamPath: string): Promise<string> => {
-        return execCmd(`python3 ${getWebcamCtrlPythonPath()} -d ${selectedWebcamPath} -j`);
+        return new Promise<string>((resolve: (value: string) => void): void => {
+            child_process.execFile(
+                'python3',
+                [getWebcamCtrlPythonPath(), '-d', selectedWebcamPath, '-j'],
+                (err: unknown, stdout: string): void => {
+                    if (err) resolve('');
+                    else resolve(stdout);
+                },
+            );
+        });
     })
 
     .set(
         WebcamAPIFunctions.executeWebcamCtrls,
         (devicePath: string, parameter: string, value: string): Promise<string> => {
-            return execCmd(`python3 ${getWebcamCtrlPythonPath()} -d ${devicePath} -c ${parameter}=${value}`);
+            return new Promise<string>((resolve: (value: string) => void): void => {
+                child_process.execFile(
+                    'python3',
+                    [getWebcamCtrlPythonPath(), '-d', devicePath, '-c', `${parameter}=${value}`],
+                    (err: unknown, stdout: string): void => {
+                        if (err) resolve('');
+                        else resolve(stdout);
+                    },
+                );
+            });
         },
     )
 
     .set(
         WebcamAPIFunctions.executeFilteredWebcamCtrls,
         async (devicePath: string, filteredControls: string): Promise<string> => {
-            return execCmd(`python3 ${getWebcamCtrlPythonPath()} -d ${devicePath} -c ${filteredControls}`);
+            return new Promise<string>((resolve: (value: string) => void): void => {
+                child_process.execFile(
+                    'python3',
+                    [getWebcamCtrlPythonPath(), '-d', devicePath, '-c', filteredControls],
+                    (err: unknown, stdout: string): void => {
+                        if (err) resolve('');
+                        else resolve(stdout);
+                    },
+                );
+            });
         },
     )
 

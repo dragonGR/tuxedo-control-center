@@ -38,7 +38,15 @@ async function resetToDefaults(): Promise<boolean> {
     }
 }
 
+function assertSafeString(input: string, paramName: string): void {
+    if (!input || !/^[a-zA-Z0-9_.-]+$/.test(input)) {
+        throw new Error(`tomteAPI: Invalid ${paramName}`);
+    }
+}
+
 async function getModuleDescription(moduleName: string, langId: string): Promise<string> {
+    assertSafeString(moduleName, 'moduleName');
+    assertSafeString(langId, 'langId');
     const command: string = `LANGUAGE=${langId} tuxedo-tomte description ${moduleName}`;
     try {
         const results: string = await execCmd(command);
@@ -50,6 +58,7 @@ async function getModuleDescription(moduleName: string, langId: string): Promise
 }
 
 async function removeModule(moduleName: string): Promise<void> {
+    assertSafeString(moduleName, 'moduleName');
     const command: string = `yes | pkexec tuxedo-tomte remove ${moduleName}`;
 
     await execCmd(command)
@@ -63,6 +72,7 @@ async function removeModule(moduleName: string): Promise<void> {
 }
 
 async function installModule(moduleName: string): Promise<void> {
+    assertSafeString(moduleName, 'moduleName');
     const command: string = `pkexec tuxedo-tomte configure ${moduleName}`;
 
     await execCmd(command)
@@ -76,6 +86,7 @@ async function installModule(moduleName: string): Promise<void> {
 }
 
 async function unBlockModule(moduleName: string): Promise<void> {
+    assertSafeString(moduleName, 'moduleName');
     const command: string = `pkexec tuxedo-tomte unblock ${moduleName}`;
 
     await execCmd(command)
@@ -89,6 +100,7 @@ async function unBlockModule(moduleName: string): Promise<void> {
 }
 
 async function blockModule(moduleName: string): Promise<void> {
+    assertSafeString(moduleName, 'moduleName');
     const command: string = `pkexec tuxedo-tomte block ${moduleName}`;
 
     await execCmd(command)
@@ -102,6 +114,7 @@ async function blockModule(moduleName: string): Promise<void> {
 }
 
 async function setMode(mode: string): Promise<void> {
+    assertSafeString(mode, 'mode');
     const command: string = `pkexec tuxedo-tomte ${mode}`;
 
     await execCmd(command)
