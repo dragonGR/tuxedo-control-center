@@ -67,18 +67,12 @@ async function runSystemInfos(ticketNumber: string): Promise<void> {
         let systemInfosPath: string = '';
 
         if (!systemInfosPackageAvailable) {
-            if (!fs.existsSync(systemInfosTmpFilePath)) {
-                console.log(
-                    `systemInfosAPI: runSystemInfos: tuxedo-systeminfo does not exist, downloading ${systemInfosTmpFilePath}`,
-                );
+            console.log(
+                `systemInfosAPI: runSystemInfos: tuxedo-systeminfo does not exist, downloading ${systemInfosTmpFilePath}`,
+            );
 
-                const fileData: string = await downloadSystemInfos();
-                await writeSystemInfosFile(fileData, systemInfosTmpFilePath);
-            } else {
-                console.log(
-                    `systemInfosAPI: runSystemInfos: tuxedo-systeminfo does not exist, but ${systemInfosTmpFilePath} does`,
-                );
-            }
+            const fileData: string = await downloadSystemInfos();
+            await writeSystemInfosFile(fileData, systemInfosTmpFilePath);
 
             systemInfosPath = systemInfosTmpFilePath;
         } else {
@@ -135,9 +129,11 @@ async function verifySystemInfosFile(systemInfosFilePath: string): Promise<void>
 async function executeSystemInfosScript(ticketNumber: string, systemInfosFilePath: string): Promise<void> {
     updateSystemInfosLabel(`Running ${systemInfosFilePath}`);
 
+    const sanitizedTicket: string = ticketNumber ? ticketNumber.replace(/[^a-zA-Z0-9_-]/g, '') : '';
+
     try {
         await execCmd(
-            `pkexec env TCC_SYSTEM_INFOS=1 DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY XDG_SESSION_TYPE=$XDG_SESSION_TYPE XDG_CURRENT_DESKTOP=$XDG_CURRENT_DESKTOP sh ${systemInfosFilePath} ${ticketNumber}`,
+            `pkexec env TCC_SYSTEM_INFOS=1 DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY XDG_SESSION_TYPE=$XDG_SESSION_TYPE XDG_CURRENT_DESKTOP=$XDG_CURRENT_DESKTOP sh ${systemInfosFilePath} ${sanitizedTicket}`,
         );
     } catch (err: unknown) {
         throw new Error(`systemInfosAPI: executeSystemInfosScript: systeminfos.sh failed => ${err}`);
