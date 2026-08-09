@@ -75,7 +75,6 @@ export class TccDBusController {
 
             setTimeout((): void => {
                 this.dbusTimeout = false;
-                this.mutex.release();
             }, 2000);
             return false;
         }
