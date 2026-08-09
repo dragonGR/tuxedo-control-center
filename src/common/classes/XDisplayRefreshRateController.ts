@@ -67,7 +67,7 @@ export class XDisplayRefreshRateController {
             // gdm XDG_SESSION_TYPE can differ from actual session type
             // Ubuntu creates xAuthority file with user gdm and that user name is unavailable,
             // but Tuxedo OS with sddm allows the user name gdm
-            const xAuthorityFileInfo: string = child_process.execSync(`ls -l ${xAuthorityFile}`).toString();
+            const xAuthorityFileInfo: string = child_process.execFileSync('ls', ['-l', xAuthorityFile]).toString();
 
             if (xAuthorityFileInfo.includes(' gdm gdm ') && userMatch && userMatch[1] === 'gdm') {
                 this.xAuthorityFile = undefined;
@@ -173,7 +173,9 @@ export class XDisplayRefreshRateController {
         let result: string = '';
         try {
             result = child_process
-                .execSync(`XAUTHORITY=${this.xAuthorityFile} xrandr -q -display ${this.display} --current`)
+                .execFileSync('xrandr', ['-q', '-display', this.display, '--current'], {
+                    env: { ...process.env, XAUTHORITY: this.xAuthorityFile },
+                })
                 .toString();
         } catch (err: unknown) {
             console.error(
@@ -265,8 +267,12 @@ export class XDisplayRefreshRateController {
     public setRefreshRateAndResolution(xRes: number, yRes: number, rate: number): boolean {
         if (this.checkVariablesAvailable() && this.isX11 === 1) {
             try {
-                child_process.execSync(
-                    `XAUTHORITY=${this.xAuthorityFile} xrandr -display ${this.display} --output ${this.displayName} --mode ${xRes}x${yRes} -r ${rate}`,
+                child_process.execFileSync(
+                    'xrandr',
+                    ['-display', this.display, '--output', this.displayName, '--mode', `${xRes}x${yRes}`, '-r', `${rate}`],
+                    {
+                        env: { ...process.env, XAUTHORITY: this.xAuthorityFile },
+                    },
                 );
                 return true;
             } catch (_err: unknown) {
