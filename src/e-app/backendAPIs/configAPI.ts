@@ -17,6 +17,9 @@
  * along with TUXEDO Control Center.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron';
 import { ipcMain } from 'electron';
 import { ConfigHandler } from '../../common/classes/ConfigHandler';
@@ -34,7 +37,8 @@ const config: ConfigHandler = new ConfigHandler(
 );
 
 async function pkexecWriteCustomProfilesAsync(newProfileList: ITccProfile[]): Promise<boolean> {
-    const tmpProfilesPath: string = '/tmp/tmptccprofiles';
+    const tmpDir: string = fs.mkdtempSync(path.join(os.tmpdir(), 'tcc-'));
+    const tmpProfilesPath: string = path.join(tmpDir, 'tmptccprofiles');
     config.writeProfiles(newProfileList, tmpProfilesPath);
     let tccdExec: string;
     if (environmentIsProduction) {
@@ -49,11 +53,16 @@ async function pkexecWriteCustomProfilesAsync(newProfileList: ITccProfile[]): Pr
     } catch (err: unknown) {
         console.error(`configAPI: pkexecWriteCustomProfilesAsync failed => ${err}`);
         return false;
+    } finally {
+        try {
+            fs.rmSync(tmpDir, { recursive: true, force: true });
+        } catch (_err: unknown) {}
     }
 }
 
 function pkexecWriteCustomProfiles(profiles: ITccProfile[]): boolean {
-    const tmpProfilesPath = '/tmp/tmptccprofiles';
+    const tmpDir: string = fs.mkdtempSync(path.join(os.tmpdir(), 'tcc-'));
+    const tmpProfilesPath: string = path.join(tmpDir, 'tmptccprofiles');
     config.writeProfiles(profiles, tmpProfilesPath);
     let tccdExec: string;
     if (environmentIsProduction) {
@@ -61,19 +70,23 @@ function pkexecWriteCustomProfiles(profiles: ITccProfile[]): boolean {
     } else {
         tccdExec = `${cwd}/dist/tuxedo-control-center/data/service/tccd`;
     }
-    // https://stackoverflow.com/questions/57484453/how-to-get-err-stderr-from-execsync
     try {
         execFileSync(`pkexec ${tccdExec} --new_profiles ${tmpProfilesPath}`);
         return true;
     } catch (err: unknown) {
         console.error(`configAPI: pkexecWriteCustomProfiles failed => ${err}`);
         return false;
+    } finally {
+        try {
+            fs.rmSync(tmpDir, { recursive: true, force: true });
+        } catch (_err: unknown) {}
     }
 }
 
 async function pkexecWriteConfigAsync(settings: ITccSettings, profiles: ITccProfile[]): Promise<boolean> {
-    const tmpProfilesPath = '/tmp/tmptccprofiles';
-    const tmpSettingsPath = '/tmp/tmptccsettings';
+    const tmpDir: string = fs.mkdtempSync(path.join(os.tmpdir(), 'tcc-'));
+    const tmpProfilesPath: string = path.join(tmpDir, 'tmptccprofiles');
+    const tmpSettingsPath: string = path.join(tmpDir, 'tmptccsettings');
     config.writeProfiles(profiles, tmpProfilesPath);
     config.writeSettings(settings, tmpSettingsPath);
     let tccdExec: string;
@@ -84,32 +97,30 @@ async function pkexecWriteConfigAsync(settings: ITccSettings, profiles: ITccProf
         tccdExec = `${cwd}/dist/tuxedo-control-center/data/service/tccd`;
     }
 
-    return new Promise<boolean>(
-        (resolve: (value: boolean | PromiseLike<boolean>) => void, _reject: (reason?: unknown) => void): void => {
-            execFile(`pkexec ${tccdExec} --new_profiles ${tmpProfilesPath} --new_settings ${tmpSettingsPath}`)
-                .then((data: { data: string; error: unknown }): void => {
-                    if (data.error) {
-                        resolve(false);
-                    } else {
-                        resolve(true);
-                    }
-                })
-                .catch((err: unknown): void => {
-                    console.error('configAPI: pkexecWriteConfigAsync failed =>', err);
-                    resolve(false);
-                });
-        },
-    );
+    try {
+        const data: { data: string; error: unknown } = await execFile(
+            `pkexec ${tccdExec} --new_profiles ${tmpProfilesPath} --new_settings ${tmpSettingsPath}`,
+        );
+        return !data.error;
+    } catch (err: unknown) {
+        console.error('configAPI: pkexecWriteConfigAsync failed =>', err);
+        return false;
+    } finally {
+        try {
+            fs.rmSync(tmpDir, { recursive: true, force: true });
+        } catch (_err: unknown) {}
+    }
 }
 
 ipcMain.on(
     'config-set-active-profile',
-    (_event: IpcMainEvent, profileId: string, stateId: string, settings: ITccSettings): void => {
+    async (_event: IpcMainEvent, profileId: string, stateId: string, settings: ITccSettings): Promise<void> => {
         // Copy existing current settings and set id of new profile
         const newSettings: ITccSettings = config.copyConfig<ITccSettings>(settings);
 
         newSettings.stateMap[stateId] = profileId;
-        const tmpSettingsPath = '/tmp/tmptccsettings';
+        const tmpDir: string = fs.mkdtempSync(path.join(os.tmpdir(), 'tcc-'));
+        const tmpSettingsPath: string = path.join(tmpDir, 'tmptccsettings');
         config.writeSettings(newSettings, tmpSettingsPath);
         let tccdExec: string;
 
@@ -118,8 +129,15 @@ ipcMain.on(
         } else {
             tccdExec = `${cwd}/dist/tuxedo-control-center/data/service/tccd`;
         }
-        // todo: error handling
-        execFile(`pkexec ${tccdExec} --new_settings ${tmpSettingsPath}`);
+        try {
+            await execFile(`pkexec ${tccdExec} --new_settings ${tmpSettingsPath}`);
+        } catch (err: unknown) {
+            console.error(`configAPI: config-set-active-profile failed => ${err}`);
+        } finally {
+            try {
+                fs.rmSync(tmpDir, { recursive: true, force: true });
+            } catch (_err: unknown) {}
+        }
     },
 );
 

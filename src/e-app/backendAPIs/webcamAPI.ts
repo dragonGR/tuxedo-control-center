@@ -18,6 +18,9 @@
  */
 
 import * as child_process from 'node:child_process';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { ConfigHandler } from '../../common/classes/ConfigHandler';
 import { TccPaths } from '../../common/classes/TccPaths';
 import { WebcamAPIFunctions } from '../../common/models/IWebcamAPI';
@@ -174,7 +177,8 @@ export const webcamHandlers: Map<string, (...args: any[]) => any> = new Map<stri
 
     .set(WebcamAPIFunctions.writeConfig, (webcamSettings: WebcamPreset[]): Promise<boolean> => {
         return new Promise<boolean>((resolve: (value: boolean | PromiseLike<boolean>) => void): void => {
-            const tmpWebcamPath: string = '/tmp/tmptccwebcam';
+            const tmpDir: string = fs.mkdtempSync(path.join(os.tmpdir(), 'tcc-'));
+            const tmpWebcamPath: string = path.join(tmpDir, 'tmptccwebcam');
             webcamConfigHandler.writeWebcamSettings(webcamSettings, tmpWebcamPath);
             let tccdExec: string;
             if (environmentIsProduction) {
@@ -185,6 +189,10 @@ export const webcamHandlers: Map<string, (...args: any[]) => any> = new Map<stri
             child_process.exec(
                 `pkexec ${tccdExec} --new_webcam ${tmpWebcamPath}`,
                 (err: unknown, _stdout: string, _stderr: string): void => {
+                    try {
+                        fs.rmSync(tmpDir, { recursive: true, force: true });
+                    } catch (_cleanErr: unknown) {}
+
                     if (err) {
                         resolve(false);
                     } else {
