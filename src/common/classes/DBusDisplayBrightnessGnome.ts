@@ -67,28 +67,22 @@ export class DBusDisplayBrightnessGnome {
     }
 
     private isGnome(): boolean {
-        const xdgDesktop: string = execCommandSync('echo $XDG_CURRENT_DESKTOP');
-        if (xdgDesktop.includes('GNOME')) {
-            return true;
-        }
-        return false;
+        const xdgDesktop: string = process.env.XDG_CURRENT_DESKTOP || '';
+        return xdgDesktop.includes('GNOME');
     }
 
     public async isAvailable(): Promise<boolean> {
         try {
-            const isGnome: boolean = this.isGnome();
-
-            if (isGnome) {
-                const iface: dbus.ClientInterface = await this.getInterface();
-                if (iface === undefined) {
-                    return false;
-                } else {
-                    return true;
-                }
+            if (!this.isGnome()) {
+                return false;
             }
-            return false;
-        } catch (err: unknown) {
-            console.error(`DBusDisplayBrightnessGnome: isAvailable failed => ${err}`);
+            const iface: dbus.ClientInterface = await this.getInterface();
+            if (iface === undefined) {
+                return false;
+            }
+            await this.getBrightness();
+            return true;
+        } catch (_err: unknown) {
             return false;
         }
     }

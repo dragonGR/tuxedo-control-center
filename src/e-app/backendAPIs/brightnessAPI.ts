@@ -50,7 +50,7 @@ initDbusDisplayBrightness().then((): void => {
 });
 
 export async function displayBrightnessGnomeCleanup(): Promise<void> {
-    displayBrightnessGnome.cleanUp();
+    displayBrightnessGnome?.cleanUp();
 }
 
 async function initDbusDisplayBrightness(): Promise<void> {

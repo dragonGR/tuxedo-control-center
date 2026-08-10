@@ -134,15 +134,15 @@ export class IntelRAPLController {
      * @returns Integer that is the maximum input value for long term power limit in micro watts or undefined on error
      */
     public getConstraint0MaxPower(): number {
-        return this.properties.constraint0PowerLimit.readValueNT();
+        return this.properties.constraint0MaxPower.readValueNT();
     }
 
     public getConstraint1MaxPower(): number {
-        return this.properties.constraint1PowerLimit.readValueNT();
+        return this.properties.constraint1MaxPower.readValueNT();
     }
 
     public getConstraint2MaxPower(): number {
-        return this.properties.constraint2PowerLimit.readValueNT();
+        return this.properties.constraint2MaxPower.readValueNT();
     }
 
     /**

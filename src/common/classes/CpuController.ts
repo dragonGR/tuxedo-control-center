@@ -281,7 +281,7 @@ export class CpuController {
                 continue;
             }
             if (core.coreIndex !== 0 && !core.online.readValue()) {
-                return;
+                continue;
             }
             const availableGovernors: string[] = core.scalingAvailableGovernors.readValue();
             if (availableGovernors.includes(governor)) {
@@ -322,7 +322,7 @@ export class CpuController {
                 continue;
             }
             if (core.coreIndex !== 0 && !core.online.readValue()) {
-                return;
+                continue;
             }
             if (core.energyPerformanceAvailablePreferences.readValue().includes(performancePreference)) {
                 try {
