@@ -530,9 +530,14 @@ export class WebcamSettingsComponent implements OnInit {
 
     private async setWebcamWithConfig(config: WebcamConstraints): Promise<void> {
         try {
-            const stream: MediaStream = await navigator.mediaDevices.getUserMedia({
-                video: config,
-            });
+            let stream: MediaStream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: config });
+            } catch (constrainedError: unknown) {
+                console.warn('webcam-settings: constrained getUserMedia failed, retrying with default video constraints:', constrainedError);
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            }
+
             const hiddenEl: HTMLElement = document.getElementById('hidden');
             if (hiddenEl) hiddenEl.style.display = 'flex';
             this.video.srcObject = stream;
@@ -634,12 +639,12 @@ export class WebcamSettingsComponent implements OnInit {
     }
 
     private createWebcamConfig(config: WebcamPresetValues): WebcamConstraints {
-        const [webcamWidth, webcamHeight] = config['resolution'].split('x');
+        const [webcamWidth, webcamHeight] = (config['resolution'] || '1280x720').split('x');
         return {
-            deviceId: { exact: this.selectedWebcam.deviceId },
-            width: { exact: Number(webcamWidth) },
-            height: { exact: Number(webcamHeight) },
-            frameRate: { exact: Number(config['fps']) },
+            width: Number(webcamWidth) || 1280,
+            height: Number(webcamHeight) || 720,
+            frameRate: Number(config['fps']) || 30,
+            deviceId: this.selectedWebcam?.deviceId || '',
         };
     }
 
