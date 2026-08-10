@@ -225,8 +225,10 @@ async function initMain(): Promise<void> {
             const dbusAvailable: boolean = await tccDBus.dbusAvailable();
             if (dbusAvailable) {
                 const tccdVersion: string = await tccDBus.tccdVersion();
-                if (tccdVersion?.length > 0 && tccdVersion !== app.getVersion()) {
-                    console.log('initMain: Other tccd version detected, restarting..');
+                const baseTccdVersion: string = tccdVersion ? tccdVersion.split('-')[0] : '';
+                const baseAppVersion: string = app.getVersion() ? app.getVersion().split('-')[0] : '';
+                if (baseTccdVersion?.length > 0 && baseTccdVersion !== baseAppVersion) {
+                    console.log(`initMain: Other tccd version detected (${tccdVersion} vs ${app.getVersion()}), restarting..`);
                     process.on('exit', (): void => {
                         child_process.spawn(process.argv[0], process.argv.slice(1).concat(['--tray']), {
                             cwd: process.cwd(),
