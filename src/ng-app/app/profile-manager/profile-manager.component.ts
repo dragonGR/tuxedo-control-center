@@ -23,7 +23,7 @@ import type { MatInput } from '@angular/material/input';
 // biome-ignore lint: injection token
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import type { ITccProfile } from '../../../common/models/TccProfile';
+import { generateProfileId, type ITccProfile } from '../../../common/models/TccProfile';
 import type { ITccSettings } from '../../../common/models/TccSettings';
 // biome-ignore lint: injection token
 import { ConfigService } from '../config.service';
@@ -217,7 +217,7 @@ export class ProfileManagerComponent implements OnInit, OnDestroy {
             });
             if (result) {
                 const profiles: ITccProfile[] = this.config.getCustomProfiles();
-                await this.utils.writeTextFile(result, JSON.stringify(profiles));
+                await this.utils.writeTextFile(result, JSON.stringify(profiles, null, 2));
             }
         } catch (err: unknown) {
             console.error(`profile-manager: exportProfiles failed => ${err}`);
@@ -240,7 +240,7 @@ export class ProfileManagerComponent implements OnInit, OnDestroy {
                 ],
                 properties: ['openFile'],
             });
-            if (result.length === 0) {
+            if (!result || result.length === 0) {
                 this.utils.pageDisabled = false;
                 return;
             }
@@ -256,34 +256,42 @@ export class ProfileManagerComponent implements OnInit, OnDestroy {
         let profiles: ITccProfile[];
         try {
             if (profileSettings) {
-                profiles = JSON.parse(profileSettings);
+                const parsed: any = JSON.parse(profileSettings);
+                profiles = Array.isArray(parsed) ? parsed : [parsed];
             }
         } catch (err: unknown) {
             console.error(`profile-manager: importProfiles parse failed => ${err}`);
             this.utils.pageDisabled = false;
             return;
         }
+
+        if (!Array.isArray(profiles) || profiles.length === 0) {
+            this.utils.pageDisabled = false;
+            return;
+        }
+
+        const validProfiles: ITccProfile[] = profiles.filter((p: any) => p && typeof p === 'object' && (p.name || p.id));
         const oldProfiles: ITccProfile[] = this.config.getCustomProfiles();
         let newProfiles: ITccProfile[] = [];
-        for (let i: number = 0; i < profiles?.length; i++) {
+        for (let i: number = 0; i < validProfiles.length; i++) {
             const conflictProfileIndex: number = oldProfiles.findIndex(
-                (x: ITccProfile): boolean => x.id === profiles[i].id,
+                (x: ITccProfile): boolean => x.id === validProfiles[i].id,
             );
             if (conflictProfileIndex !== -1) {
                 const result: IProfileConflictDialogResult = await this.dialogService.openConflictModal(
                     oldProfiles[conflictProfileIndex],
-                    profiles[i],
+                    validProfiles[i],
                 );
                 if (result.action === 'keepNew') {
-                    newProfiles = newProfiles.concat(profiles[i]);
+                    newProfiles = newProfiles.concat(validProfiles[i]);
                 } else if (result.action === 'newName') {
-                    const newProfile: ITccProfile = profiles[i];
+                    const newProfile: ITccProfile = { ...validProfiles[i] };
                     newProfile.name = result.newName;
-                    newProfile.id = 'generateNewID';
+                    newProfile.id = generateProfileId();
                     newProfiles = newProfiles.concat(newProfile);
                 }
             } else {
-                newProfiles = newProfiles.concat(profiles[i]);
+                newProfiles = newProfiles.concat(validProfiles[i]);
             }
         }
         if (newProfiles?.length > 0) {

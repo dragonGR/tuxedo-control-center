@@ -151,7 +151,7 @@ export class ConfigService implements OnDestroy {
         let profileToCopy: ITccProfile;
 
         if (sourceProfileId === undefined) {
-            profileToCopy = this.dbus.defaultValuesProfile.value;
+            profileToCopy = this.dbus.defaultValuesProfile.value ?? this.getDefaultProfiles()?.[0];
         } else {
             profileToCopy = this.getProfileById(sourceProfileId);
         }
@@ -179,17 +179,14 @@ export class ConfigService implements OnDestroy {
     public async importProfiles(newProfiles: ITccProfile[]): Promise<boolean> {
         let newProfileList: ITccProfile[] = this.getCustomProfiles();
         for (let i: number = 0; i < newProfiles?.length; i++) {
-            // https://stackoverflow.com/questions/7364150/find-object-by-id-in-an-array-of-javascript-objects
             const oldProfileIndex: number = newProfileList.findIndex(
                 (x: ITccProfile): boolean => x.id === newProfiles[i].id,
             );
             if (oldProfileIndex !== -1) {
                 newProfileList[oldProfileIndex] = newProfiles[i];
             } else {
-                // when we want to override the old profile or there is no conflict we want to keep the
-                // original ID
-                const newProfile: ITccProfile = newProfiles[i];
-                if (newProfile.id === 'generateNewID') {
+                const newProfile: ITccProfile = { ...newProfiles[i] };
+                if (!newProfile.id || newProfile.id === 'generateNewID') {
                     newProfile.id = generateProfileId();
                 }
                 newProfileList = newProfileList.concat(newProfile);
@@ -206,14 +203,31 @@ export class ConfigService implements OnDestroy {
     }
 
     public async deleteCustomProfile(profileIdToDelete: string): Promise<boolean> {
-        const newProfileList: ITccProfile[] = this.getCustomProfiles().filter(
+        const customProfiles = this.getCustomProfiles();
+        const newProfileList: ITccProfile[] = customProfiles.filter(
             (profile: ITccProfile): boolean => profile.id !== profileIdToDelete,
         );
-        if (newProfileList?.length === this.getCustomProfiles()?.length) {
+        if (newProfileList?.length === customProfiles?.length) {
             return false;
         }
+
+        const currentSettings = this.getSettings();
+        let settingsChanged = false;
+        if (currentSettings?.stateMap) {
+            const fallbackProfileId = this.getDefaultProfiles()?.[0]?.id ?? 'office';
+            for (const stateKey of Object.keys(currentSettings.stateMap)) {
+                if (currentSettings.stateMap[stateKey] === profileIdToDelete) {
+                    currentSettings.stateMap[stateKey] = fallbackProfileId;
+                    settingsChanged = true;
+                }
+            }
+        }
+
         const success: boolean = await window.config.pkexecWriteCustomProfilesAsync(newProfileList);
         if (success) {
+            if (settingsChanged) {
+                await window.config.pkexecWriteConfigAsync(currentSettings, newProfileList);
+            }
             this.updateConfigData();
             await this.dbus.triggerUpdate();
         }
