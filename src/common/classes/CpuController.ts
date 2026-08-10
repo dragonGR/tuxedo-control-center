@@ -105,10 +105,9 @@ export class CpuController {
             if (!this.cores[i].online.isAvailable()) {
                 continue;
             }
-            if (i < numberOfCores) {
-                this.cores[i].online.writeValue(true);
-            } else {
-                this.cores[i].online.writeValue(false);
+            const targetState: boolean = i < numberOfCores;
+            if (this.cores[i].online.readValue() !== targetState) {
+                this.cores[i].online.writeValue(targetState);
             }
         }
     }
@@ -181,7 +180,9 @@ export class CpuController {
                 newMaxFrequency = findClosestValue(newMaxFrequency, availableFrequencies);
             }
 
-            core.scalingMaxFreq.writeValue(newMaxFrequency);
+            if (core.scalingMaxFreq.readValue() !== newMaxFrequency) {
+                core.scalingMaxFreq.writeValue(newMaxFrequency);
+            }
         }
 
         // AMD does not count boost frequency to coreMaxFrequency while Intel does. So on AMD a setMaxFrequency over
@@ -199,10 +200,9 @@ export class CpuController {
         }
 
         if (this.boost.isAvailable() && scalingDriver === ScalingDriver.acpi_cpufreq) {
-            if (setMaxFrequency === undefined || setMaxFrequency > maximumAvailableFrequency) {
-                this.boost.writeValue(true);
-            } else {
-                this.boost.writeValue(false);
+            const targetBoost: boolean = setMaxFrequency === undefined || setMaxFrequency > maximumAvailableFrequency;
+            if (this.boost.readValue() !== targetBoost) {
+                this.boost.writeValue(targetBoost);
             }
         }
     }
@@ -265,7 +265,9 @@ export class CpuController {
                 newMinFrequency = findClosestValue(newMinFrequency, availableFrequencies);
             }
 
-            core.scalingMinFreq.writeValue(newMinFrequency);
+            if (core.scalingMinFreq.readValue() !== newMinFrequency) {
+                core.scalingMinFreq.writeValue(newMinFrequency);
+            }
         }
     }
 
@@ -281,6 +283,20 @@ export class CpuController {
             return;
         }
 
+        // Validate governor availability on first core that has available governors
+        const firstCoreWithGovernors: LogicalCpuController = this.cores.find(
+            (c: LogicalCpuController): boolean => c.scalingAvailableGovernors.isAvailable(),
+        );
+        if (firstCoreWithGovernors) {
+            const available: string[] = firstCoreWithGovernors.scalingAvailableGovernors.readValue();
+            if (!available.includes(governor)) {
+                console.error(
+                    `CpuController: setGovernor: Chosen governor '${governor}' is not available, available are: ${JSON.stringify(available)}`,
+                );
+                return;
+            }
+        }
+
         for (const core of this.cores) {
             if (!core.scalingGovernor.isAvailable() || !core.scalingAvailableGovernors.isAvailable()) {
                 continue;
@@ -288,13 +304,8 @@ export class CpuController {
             if (core.coreIndex !== 0 && !core.online.readValue()) {
                 continue;
             }
-            const availableGovernors: string[] = core.scalingAvailableGovernors.readValue();
-            if (availableGovernors.includes(governor)) {
+            if (core.scalingGovernor.readValue() !== governor) {
                 core.scalingGovernor.writeValue(governor);
-            } else {
-                throw Error(
-                    `CpuController: setGovernor: Choosen governor '${governor}' is not available (${core.cpuPath}), available are: ${JSON.stringify(availableGovernors)}`,
-                );
             }
         }
     }
@@ -330,14 +341,16 @@ export class CpuController {
                 continue;
             }
             if (core.energyPerformanceAvailablePreferences.readValue().includes(performancePreference)) {
-                try {
-                    core.energyPerformancePreference.writeValue(performancePreference);
-                } catch (_err: unknown) {
-                    console.error(
-                        `CpuController: setEnergyPerformancePreference: ${performancePreference} is not supported.`,
-                    );
-                    this.unsupportedEnergyPreferenceValues.push(performancePreference);
-                    break;
+                if (core.energyPerformancePreference.readValue() !== performancePreference) {
+                    try {
+                        core.energyPerformancePreference.writeValue(performancePreference);
+                    } catch (_err: unknown) {
+                        console.error(
+                            `CpuController: setEnergyPerformancePreference: ${performancePreference} is not supported.`,
+                        );
+                        this.unsupportedEnergyPreferenceValues.push(performancePreference);
+                        break;
+                    }
                 }
             }
         }
