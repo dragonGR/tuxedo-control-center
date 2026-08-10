@@ -44,6 +44,9 @@ startTCCAccelerator = app.commandLine.getSwitchValue('start-tcc-accelerator');
 if (startTCCAccelerator === '') {
     startTCCAccelerator = 'Super+Alt+F6';
 }
+if (process.env.XDG_SESSION_TYPE === 'wayland') {
+    app.commandLine.appendSwitch('disable-vulkan');
+}
 const tccConfigDir: string = path.join(os.homedir(), '.tcc');
 const tccStandardConfigFile: string = path.join(tccConfigDir, 'user.conf');
 // Tweak to get correct dirname for resource files outside app.asar
@@ -90,7 +93,9 @@ app.whenReady().then(async (): Promise<void> => {
             activateTccGui();
         });
         if (!success) {
-            console.log('initMain: Failed to register global shortcut');
+            console.log(
+                `initMain: Global shortcut '${startTCCAccelerator}' not registered (Wayland or desktop environment policy)`,
+            );
         }
     }
 

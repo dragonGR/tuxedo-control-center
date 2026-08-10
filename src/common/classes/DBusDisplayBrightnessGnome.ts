@@ -80,7 +80,7 @@ export class DBusDisplayBrightnessGnome {
             if (iface === undefined) {
                 return false;
             }
-            await this.getBrightness();
+            await this.getBrightness(true);
             return true;
         } catch (_err: unknown) {
             return false;
@@ -118,7 +118,7 @@ export class DBusDisplayBrightnessGnome {
         });
     }
 
-    public async getBrightness(): Promise<number> {
+    public async getBrightness(silent: boolean = false): Promise<number> {
         try {
             const iface: dbus.ClientInterface = await this.getInterface();
             if (iface !== undefined) {
@@ -128,7 +128,9 @@ export class DBusDisplayBrightnessGnome {
                 throw new Error('Interface not available');
             }
         } catch (err: unknown) {
-            console.error(`DBusDisplayBrightnessGnome: getBrightness failed => ${err}`);
+            if (!silent) {
+                console.error(`DBusDisplayBrightnessGnome: getBrightness failed => ${err}`);
+            }
             throw err;
         }
     }
