@@ -89,14 +89,9 @@ app.whenReady().then(async (): Promise<void> => {
     }
 
     if (startTCCAccelerator !== 'none') {
-        const success: boolean = globalShortcut.register(startTCCAccelerator, (): void => {
+        globalShortcut.register(startTCCAccelerator, (): void => {
             activateTccGui();
         });
-        if (!success) {
-            console.log(
-                `initMain: Global shortcut '${startTCCAccelerator}' not registered (Wayland or desktop environment policy)`,
-            );
-        }
     }
 
     // Initialize brightness mode from user config

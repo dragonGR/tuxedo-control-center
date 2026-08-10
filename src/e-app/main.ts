@@ -17,7 +17,10 @@
  * along with TUXEDO Control Center.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
+
+app.commandLine.appendSwitch('disable-vulkan');
+app.commandLine.appendSwitch('disable-features', 'Vulkan');
 import { aquarisAPIHandle } from '../common/models/IAquarisAPI';
 import { dbusAPIHandle } from '../common/models/IDbusAPI';
 import { tomteAPIHandle } from '../common/models/ITomteAPI';

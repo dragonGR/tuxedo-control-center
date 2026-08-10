@@ -14,7 +14,7 @@
         "test": "run-s test-common test-service-app test-appstream",
         "compile": "run-s clean build-electron build-native-prod build-service-prod build-ng-prod copy-files",
         "build": "run-s compile electron-builder",
-        "start": "electron ./dist/tuxedo-control-center",
+        "start": "electron ./dist/tuxedo-control-center --disable-vulkan --disable-features=Vulkan",
         "run": "npm start",
 
         "postinstall": "npm run && electron-builder install-app-deps && patch-package",
