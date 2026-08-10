@@ -28,247 +28,182 @@ const cpu: CpuController = new CpuController('/sys/devices/system/cpu');
 // todo: values can most likely be gathered in the cpu worker via onWork() instead to avoid unnecessary duplicated file access
 // there already is core.scalingAvailableFrequencies.readValueNT() and this.cpuCtrl.cores[0].cpuinfoMinFreq.readValueNT() for example
 // todo: readValueNT() is sync and thus it is an async function which runs sync code
-ipcMain.handle('get-general-cpu-info-async', (_event: IpcMainInvokeEvent): Promise<IGeneralCPUInfo> => {
-    return new Promise<IGeneralCPUInfo>(
-        (
-            resolve: (value: IGeneralCPUInfo | PromiseLike<IGeneralCPUInfo>) => void,
-            reject: (reason?: unknown) => void,
-        ): void => {
-            try {
-                if (!cpu.cores || cpu.cores.length === 0) {
-                    resolve(undefined);
-                    return;
-                }
-                let cpuInfo: IGeneralCPUInfo;
-                const scalingDriver: string = cpu.cores[0].scalingDriver.readValueNT();
-                try {
-                    const cpuinfoMinFreqAvailable: boolean = cpu.cores[0].cpuinfoMinFreq.isAvailable();
-                    let minFreq: number;
-                    if (cpuinfoMinFreqAvailable) {
-                        minFreq = cpu.cores[0].cpuinfoMinFreq.readValueNT();
-                    }
+ipcMain.handle('get-general-cpu-info-async', async (_event: IpcMainInvokeEvent): Promise<IGeneralCPUInfo> => {
+    try {
+        if (!cpu.cores || cpu.cores.length === 0) {
+            return undefined;
+        }
 
-                    const cpuinfoMaxFreqAvailable: boolean = cpu.cores[0].cpuinfoMaxFreq.isAvailable();
-                    let maxFreq: number;
-                    if (cpuinfoMaxFreqAvailable) {
-                        maxFreq = cpu.cores[0].cpuinfoMaxFreq.readValueNT();
-                    }
+        const firstCore = cpu.cores[0];
+        const scalingDriver: string = firstCore.scalingDriver.isAvailable()
+            ? firstCore.scalingDriver.readValueNT()
+            : undefined;
 
-                    const scalingAvailableFrequenciesAvailable: boolean =
-                        cpu.cores[0].scalingAvailableFrequencies.isAvailable();
-                    let scalingAvailableFrequencies: number[];
-                    if (scalingAvailableFrequenciesAvailable) {
-                        scalingAvailableFrequencies = cpu.cores[0].scalingAvailableFrequencies.readValueNT();
-                    }
+        const minFreq: number = firstCore.cpuinfoMinFreq.isAvailable()
+            ? firstCore.cpuinfoMinFreq.readValueNT()
+            : undefined;
 
-                    const scalingAvailableGovernorsAvailable: boolean =
-                        cpu.cores[0].scalingAvailableGovernors.isAvailable();
-                    let scalingAvailableGovernors: string[];
-                    if (scalingAvailableGovernorsAvailable) {
-                        scalingAvailableGovernors = cpu.cores[0].scalingAvailableGovernors.readValueNT();
-                    }
+        let maxFreq: number = firstCore.cpuinfoMaxFreq.isAvailable()
+            ? firstCore.cpuinfoMaxFreq.readValueNT()
+            : undefined;
 
-                    const energyPerformanceAvailablePreferencesAvailable: boolean =
-                        cpu.cores[0].energyPerformanceAvailablePreferences.isAvailable();
-                    let energyPerformanceAvailablePreferences: string[];
-                    if (energyPerformanceAvailablePreferencesAvailable) {
-                        energyPerformanceAvailablePreferences =
-                            cpu.cores[0].energyPerformanceAvailablePreferences.readValueNT();
-                    }
+        let scalingAvailableFrequencies: number[] = firstCore.scalingAvailableFrequencies.isAvailable()
+            ? firstCore.scalingAvailableFrequencies.readValueNT()
+            : undefined;
 
-                    const boostAvailable: boolean = cpu.boost.isAvailable();
-                    let boost: boolean;
-                    if (boostAvailable) {
-                        boost = cpu.boost.readValueNT();
-                    }
+        const scalingAvailableGovernors: string[] = firstCore.scalingAvailableGovernors.isAvailable()
+            ? firstCore.scalingAvailableGovernors.readValueNT()
+            : undefined;
 
-                    cpuInfo = {
-                        availableCores: cpu.cores?.length,
-                        minFreq: minFreq,
-                        maxFreq: maxFreq,
-                        scalingAvailableFrequencies: scalingAvailableFrequencies,
-                        scalingAvailableGovernors: scalingAvailableGovernors,
-                        energyPerformanceAvailablePreferences: energyPerformanceAvailablePreferences,
-                        reducedAvailableFreq: cpu.cores[0].getReducedAvailableFreqNT(),
-                        boost: boost,
-                    };
-                    if (cpuInfo.scalingAvailableFrequencies !== undefined) {
-                        cpuInfo.maxFreq = cpuInfo.scalingAvailableFrequencies[0];
-                    }
-                    if (cpuInfo.boost !== undefined && scalingDriver === ScalingDriver.acpi_cpufreq) {
-                        // FIXME: Use actual max boost frequency
-                        cpuInfo.maxFreq += 1000000;
-                        cpuInfo.scalingAvailableFrequencies = [cpuInfo.maxFreq].concat(
-                            cpuInfo.scalingAvailableFrequencies,
-                        );
-                    }
-                } catch (err: unknown) {
-                    console.log(err);
-                }
-                resolve(cpuInfo);
-            } catch (err: unknown) {
-                console.error(`cpuAPI: get-general-cpu-info-async failed => ${err}`);
-                reject(err);
-            }
-        },
-    );
+        const energyPerformanceAvailablePreferences: string[] =
+            firstCore.energyPerformanceAvailablePreferences.isAvailable()
+                ? firstCore.energyPerformanceAvailablePreferences.readValueNT()
+                : undefined;
+
+        const boost: boolean = cpu.boost.isAvailable() ? cpu.boost.readValueNT() : undefined;
+
+        if (scalingAvailableFrequencies !== undefined && scalingAvailableFrequencies.length > 0) {
+            maxFreq = scalingAvailableFrequencies[0];
+        }
+
+        if (boost !== undefined && scalingDriver === ScalingDriver.acpi_cpufreq && maxFreq !== undefined) {
+            // FIXME: Use actual max boost frequency
+            maxFreq += 1000000;
+            scalingAvailableFrequencies = [maxFreq].concat(scalingAvailableFrequencies || []);
+        }
+
+        const cpuInfo: IGeneralCPUInfo = {
+            availableCores: cpu.cores.length,
+            minFreq: minFreq,
+            maxFreq: maxFreq,
+            scalingAvailableFrequencies: scalingAvailableFrequencies,
+            scalingAvailableGovernors: scalingAvailableGovernors,
+            energyPerformanceAvailablePreferences: energyPerformanceAvailablePreferences,
+            reducedAvailableFreq: firstCore.getReducedAvailableFreqNT(),
+            boost: boost,
+        };
+
+        return cpuInfo;
+    } catch (err: unknown) {
+        console.error(`cpuAPI: get-general-cpu-info-async failed => ${err}`);
+        return undefined;
+    }
 });
 
-// todo: same todos as above
-ipcMain.handle('get-logical-core-info-async', (_event: IpcMainInvokeEvent): Promise<ILogicalCoreInfo[]> => {
-    return new Promise<ILogicalCoreInfo[]>(
-        (
-            resolve: (value: ILogicalCoreInfo[] | PromiseLike<ILogicalCoreInfo[]>) => void,
-            reject: (reason?: unknown) => void,
-        ): void => {
+ipcMain.handle('get-logical-core-info-async', async (_event: IpcMainInvokeEvent): Promise<ILogicalCoreInfo[]> => {
+    try {
+        const coreInfoList: ILogicalCoreInfo[] = [];
+
+        if (!cpu.cores) {
+            return coreInfoList;
+        }
+
+        for (const core of cpu.cores) {
             try {
-                const coreInfoList: ILogicalCoreInfo[] = [];
-                for (const core of cpu.cores) {
-                    try {
-                        let onlineStatus: boolean = true;
-                        if (core.coreIndex !== 0) {
-                            onlineStatus = core.online.readValue();
-                        }
-                        // Skip core if offline
-                        if (!onlineStatus) {
-                            continue;
-                        }
-
-                        const scalingCurFreqAvailable: boolean = core.scalingCurFreq.isAvailable();
-                        let scalingCurFreq: number;
-                        if (scalingCurFreqAvailable) {
-                            scalingCurFreq = core.scalingCurFreq.readValueNT();
-                        }
-
-                        const scalingMinFreqAvailable: boolean = core.scalingMinFreq.isAvailable();
-                        let scalingMinFreq: number;
-                        if (scalingMinFreqAvailable) {
-                            scalingMinFreq = core.scalingMinFreq.readValueNT();
-                        }
-
-                        const scalingMaxFreqAvailable: boolean = core.scalingMaxFreq.isAvailable();
-                        let scalingMaxFreq: number;
-                        if (scalingMaxFreqAvailable) {
-                            scalingMaxFreq = core.scalingMaxFreq.readValueNT();
-                        }
-
-                        const scalingDriverAvailable: boolean = core.scalingDriver.isAvailable();
-                        let scalingDriver: string;
-                        if (scalingDriverAvailable) {
-                            scalingDriver = core.scalingDriver.readValueNT();
-                        }
-
-                        const energyPerformanceAvailablePreferencesAvailable: boolean =
-                            core.energyPerformanceAvailablePreferences.isAvailable();
-                        let energyPerformanceAvailablePreferences: string[];
-                        if (energyPerformanceAvailablePreferencesAvailable) {
-                            energyPerformanceAvailablePreferences =
-                                core.energyPerformanceAvailablePreferences.readValueNT();
-                        }
-
-                        const energyPerformancePreferenceAvailable: boolean =
-                            core.energyPerformancePreference.isAvailable();
-                        let energyPerformancePreference: string;
-                        if (energyPerformancePreferenceAvailable) {
-                            energyPerformancePreference = core.energyPerformancePreference.readValueNT();
-                        }
-
-                        const scalingAvailableGovernorsAvailable: boolean =
-                            core.scalingAvailableGovernors.isAvailable();
-                        let scalingAvailableGovernors: string[];
-                        if (scalingAvailableGovernorsAvailable) {
-                            scalingAvailableGovernors = core.scalingAvailableGovernors.readValueNT();
-                        }
-
-                        const constscalingGovernorAvailable: boolean = core.scalingGovernor.isAvailable();
-                        let scalingGovernor: string;
-                        if (constscalingGovernorAvailable) {
-                            scalingGovernor = core.scalingGovernor.readValueNT();
-                        }
-
-                        const cpuInfoMaxFreqAvailable: boolean = core.cpuinfoMaxFreq.isAvailable();
-                        let cpuInfoMaxFreq: number;
-                        if (cpuInfoMaxFreqAvailable) {
-                            cpuInfoMaxFreq = core.cpuinfoMaxFreq.readValueNT();
-                        }
-
-                        const cpuInfoMinFreqAvailable: boolean = core.cpuinfoMinFreq.isAvailable();
-                        let cpuInfoMinFreq: number;
-                        if (cpuInfoMinFreqAvailable) {
-                            cpuInfoMinFreq = core.cpuinfoMinFreq.readValueNT();
-                        }
-
-                        const coreIdAvailable: boolean = core.coreId.isAvailable();
-                        let coreId: number;
-                        if (coreIdAvailable) {
-                            coreId = core.coreId.readValueNT();
-                        }
-
-                        const coreSiblingsListAvailable: boolean = core.coreSiblingsList.isAvailable();
-                        let coreSiblingsList: number[];
-                        if (coreSiblingsListAvailable) {
-                            coreSiblingsList = core.coreSiblingsList.readValueNT();
-                        }
-
-                        const physicalPackageIdAvailable: boolean = core.physicalPackageId.isAvailable();
-                        let physicalPackageId: number;
-                        if (physicalPackageIdAvailable) {
-                            physicalPackageId = core.physicalPackageId.readValueNT();
-                        }
-
-                        const threadSiblingsListAvailable: boolean = core.threadSiblingsList.isAvailable();
-                        let threadSiblingsList: number[];
-                        if (threadSiblingsListAvailable) {
-                            threadSiblingsList = core.threadSiblingsList.readValueNT();
-                        }
-
-                        const coreInfo: ILogicalCoreInfo = {
-                            index: core.coreIndex,
-                            online: onlineStatus,
-                            scalingCurFreq: scalingCurFreq,
-                            scalingMinFreq: scalingMinFreq,
-                            scalingMaxFreq: scalingMaxFreq,
-                            scalingDriver: scalingDriver,
-                            energyPerformanceAvailablePreferences: energyPerformanceAvailablePreferences,
-                            energyPerformancePreference: energyPerformancePreference,
-                            scalingAvailableGovernors: scalingAvailableGovernors,
-                            scalingGovernor: scalingGovernor,
-                            cpuInfoMaxFreq: cpuInfoMaxFreq,
-                            cpuInfoMinFreq: cpuInfoMinFreq,
-                            coreId: coreId,
-                            coreSiblingsList: coreSiblingsList,
-                            physicalPackageId: physicalPackageId,
-                            threadSiblingsList: threadSiblingsList,
-                        };
-                        coreInfoList.push(coreInfo);
-                    } catch (err: unknown) {
-                        console.error(`cpuAPI: get-logical-core-info-async loop failed => ${err}`);
-                    }
+                let onlineStatus: boolean = true;
+                if (core.coreIndex !== 0 && core.online.isAvailable()) {
+                    onlineStatus = core.online.readValueNT() ?? false;
                 }
-                resolve(coreInfoList);
+
+                if (!onlineStatus) {
+                    continue;
+                }
+
+                const scalingCurFreq: number = core.scalingCurFreq.isAvailable()
+                    ? core.scalingCurFreq.readValueNT()
+                    : undefined;
+
+                const scalingMinFreq: number = core.scalingMinFreq.isAvailable()
+                    ? core.scalingMinFreq.readValueNT()
+                    : undefined;
+
+                const scalingMaxFreq: number = core.scalingMaxFreq.isAvailable()
+                    ? core.scalingMaxFreq.readValueNT()
+                    : undefined;
+
+                const scalingDriver: string = core.scalingDriver.isAvailable()
+                    ? core.scalingDriver.readValueNT()
+                    : undefined;
+
+                const energyPerformanceAvailablePreferences: string[] =
+                    core.energyPerformanceAvailablePreferences.isAvailable()
+                        ? core.energyPerformanceAvailablePreferences.readValueNT()
+                        : undefined;
+
+                const energyPerformancePreference: string = core.energyPerformancePreference.isAvailable()
+                    ? core.energyPerformancePreference.readValueNT()
+                    : undefined;
+
+                const scalingAvailableGovernors: string[] = core.scalingAvailableGovernors.isAvailable()
+                    ? core.scalingAvailableGovernors.readValueNT()
+                    : undefined;
+
+                const scalingGovernor: string = core.scalingGovernor.isAvailable()
+                    ? core.scalingGovernor.readValueNT()
+                    : undefined;
+
+                const cpuInfoMaxFreq: number = core.cpuinfoMaxFreq.isAvailable()
+                    ? core.cpuinfoMaxFreq.readValueNT()
+                    : undefined;
+
+                const cpuInfoMinFreq: number = core.cpuinfoMinFreq.isAvailable()
+                    ? core.cpuinfoMinFreq.readValueNT()
+                    : undefined;
+
+                const coreId: number = core.coreId.isAvailable() ? core.coreId.readValueNT() : undefined;
+
+                const coreSiblingsList: number[] = core.coreSiblingsList.isAvailable()
+                    ? core.coreSiblingsList.readValueNT()
+                    : undefined;
+
+                const physicalPackageId: number = core.physicalPackageId.isAvailable()
+                    ? core.physicalPackageId.readValueNT()
+                    : undefined;
+
+                const threadSiblingsList: number[] = core.threadSiblingsList.isAvailable()
+                    ? core.threadSiblingsList.readValueNT()
+                    : undefined;
+
+                const coreInfo: ILogicalCoreInfo = {
+                    index: core.coreIndex,
+                    online: onlineStatus,
+                    scalingCurFreq: scalingCurFreq,
+                    scalingMinFreq: scalingMinFreq,
+                    scalingMaxFreq: scalingMaxFreq,
+                    scalingDriver: scalingDriver,
+                    energyPerformanceAvailablePreferences: energyPerformanceAvailablePreferences,
+                    energyPerformancePreference: energyPerformancePreference,
+                    scalingAvailableGovernors: scalingAvailableGovernors,
+                    scalingGovernor: scalingGovernor,
+                    cpuInfoMaxFreq: cpuInfoMaxFreq,
+                    cpuInfoMinFreq: cpuInfoMinFreq,
+                    coreId: coreId,
+                    coreSiblingsList: coreSiblingsList,
+                    physicalPackageId: physicalPackageId,
+                    threadSiblingsList: threadSiblingsList,
+                };
+                coreInfoList.push(coreInfo);
             } catch (err: unknown) {
-                console.error(`cpuAPI: get-logical-core-info-async failed => ${err}`);
-                reject(err);
+                console.error(`cpuAPI: get-logical-core-info-async loop failed for core ${core.coreIndex} => ${err}`);
             }
-        },
-    );
+        }
+        return coreInfoList;
+    } catch (err: unknown) {
+        console.error(`cpuAPI: get-logical-core-info-async failed => ${err}`);
+        return [];
+    }
 });
 
-ipcMain.handle('get-intel-pstate-turbo-value-async', (_event: IpcMainInvokeEvent): Promise<boolean> => {
-    return new Promise<boolean>(
-        (resolve: (value: boolean | PromiseLike<boolean>) => void, reject: (reason?: unknown) => void): void => {
-            try {
-                if (cpu.intelPstate.noTurbo.isAvailable()) {
-                    resolve(cpu.intelPstate.noTurbo.readValueNT());
-                } else {
-                    resolve(false);
-                }
-            } catch (err: unknown) {
-                console.error(`cpuAPI: get-intel-pstate-turbo-value-async failed => ${err}`);
-                reject(err);
-            }
-        },
-    );
+ipcMain.handle('get-intel-pstate-turbo-value-async', async (_event: IpcMainInvokeEvent): Promise<boolean> => {
+    try {
+        if (cpu.intelPstate.noTurbo.isAvailable()) {
+            return cpu.intelPstate.noTurbo.readValueNT() ?? false;
+        }
+        return false;
+    } catch (err: unknown) {
+        console.error(`cpuAPI: get-intel-pstate-turbo-value-async failed => ${err}`);
+        return false;
+    }
 });
 
 ipcMain.on('comp-get-scaling-driver-acpi-cpu-freq-sync', (_event: IpcMainEvent): string => {
