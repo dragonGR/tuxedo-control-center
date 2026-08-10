@@ -276,7 +276,7 @@ export async function createWebcamPreview(langId: string, arg: WebcamConstraints
     });
 
     webcamWindow.on('close', (): void => {
-        tccWindow.webContents.send('external-webcam-preview-closed');
+        tccWindow?.webContents?.send('external-webcam-preview-closed');
         webcamWindow = null;
     });
 
@@ -291,11 +291,11 @@ ipcMain.on('close-app', (): void => {
 });
 
 ipcMain.on('close-window', (): void => {
-    tccWindow.close();
+    tccWindow?.close();
 });
 
 ipcMain.on('minimize-window', (): void => {
-    tccWindow.minimize();
+    tccWindow?.minimize();
 });
 
 ipcMain.on('prime-window-close', (): void => {

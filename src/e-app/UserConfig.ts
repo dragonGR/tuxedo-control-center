@@ -44,40 +44,44 @@ export class UserConfig {
     public async set(property: string, value: string): Promise<void> {
         await this.setInProgress();
         try {
-            await this.readConfig();
+            try {
+                await this.readConfig();
+            } catch (err: unknown) {
+                if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') {
+                    console.log(`Config file (${this.configFile}) does not exist and will be created.`);
+                } else {
+                    throw err;
+                }
+            }
+            this.validateValues();
+            this.data[property] = value;
+            await this.writeConfig();
         } catch (err: unknown) {
             console.error(`UserConfig: set failed => ${err}`);
-
-            // todo: error handling
-            if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') {
-                console.log(`Config file (${this.configFile}) does not exist and will be created.`);
-            } else {
-                await this.setProgressDone();
-                throw err;
-            }
+            throw err;
+        } finally {
+            await this.setProgressDone();
         }
-        this.validateValues();
-        this.data[property] = value;
-        await this.writeConfig();
-        await this.setProgressDone();
     }
 
     public async get(property: string): Promise<string> {
         await this.setInProgress();
         try {
-            await this.readConfig();
+            try {
+                await this.readConfig();
+            } catch (err: unknown) {
+                if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+                    throw err;
+                }
+            }
+            this.validateValues();
+            return this.data[property];
         } catch (err: unknown) {
             console.error(`UserConfig: get failed => ${err}`);
-
-            // todo: error handling
-            if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') {
-                await this.setProgressDone();
-                throw err;
-            }
+            throw err;
+        } finally {
+            await this.setProgressDone();
         }
-        this.validateValues();
-        await this.setProgressDone();
-        return this.data[property];
     }
 
     private async writeConfig(): Promise<void> {

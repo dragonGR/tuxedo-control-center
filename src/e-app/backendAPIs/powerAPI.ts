@@ -81,20 +81,16 @@ function getBusPath(driver: string): string {
 ipcMain.handle(
     'prime-select',
     async (_event: IpcMainInvokeEvent, selectedState: string): Promise<{ data: string; error: unknown }> => {
-        return new Promise<{ data: string; error: unknown }>(
-            (
-                resolve: (
-                    value: { data: string; error: unknown } | PromiseLike<{ data: string; error: unknown }>,
-                ) => void,
-                reject: (reason?: unknown) => void,
-            ): void => {
-                try {
-                    resolve(execFile(`pkexec prime-select ${selectedState}`));
-                } catch (err: unknown) {
-                    console.error(`powerAPI: prime-select failed => ${err}`);
-                    reject(err);
-                }
-            },
-        );
+        const allowedStates: string[] = ['nvidia', 'intel', 'on-demand', 'offload'];
+        if (!allowedStates.includes(selectedState)) {
+            console.error(`powerAPI: prime-select invalid state '${selectedState}'`);
+            return { data: '', error: 'Invalid state' };
+        }
+        try {
+            return await execFile(`pkexec prime-select ${selectedState}`);
+        } catch (err: unknown) {
+            console.error(`powerAPI: prime-select failed => ${err}`);
+            return { data: '', error: err };
+        }
     },
 );
