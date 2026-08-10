@@ -156,8 +156,9 @@ export class FanControlWorker extends DaemonWorker {
 
             // Re-check in case of late detected temperature sensors, mainly affects logic mapping CPU/GPU
             if (this.fanCheckCounter < 20) {
-                this.nrTempsAvailable = await this.fanApi.getNumberTempsAvailable();
-                if (this.nrTempsAvailable !== 0) {
+                const newNrTemps: number = await this.fanApi.getNumberTempsAvailable();
+                if (newNrTemps !== 0 && newNrTemps !== this.nrTempsAvailable) {
+                    this.nrTempsAvailable = newNrTemps;
                     await this.initializeFanControl(this.fanApi, undefined, true);
                 }
                 this.fanCheckCounter += 1;
@@ -168,7 +169,7 @@ export class FanControlWorker extends DaemonWorker {
     }
 
     public async onExit(): Promise<void> {
-        await this.fanApi.exit();
+        await this.fanApi?.exit();
     }
 
     private async initializeFanControl(

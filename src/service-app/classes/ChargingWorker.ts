@@ -177,6 +177,7 @@ export class ChargingWorker extends DaemonWorker {
 
     public async getChargeStartAvailableThresholds(): Promise<number[]> {
         const bat: PowerSupplyController = await PowerSupplyController.getFirstBattery();
+        if (!bat) return [];
 
         // Default to empty if no configurable threshold detected.
         if (!bat.chargeControlStartThreshold.isAvailable()) {
@@ -195,6 +196,7 @@ export class ChargingWorker extends DaemonWorker {
 
     public async getChargeEndAvailableThresholds(): Promise<number[]> {
         const bat: PowerSupplyController = await PowerSupplyController.getFirstBattery();
+        if (!bat) return [];
 
         // Default to empty if no configurable threshold detected.
         if (!bat.chargeControlEndThreshold.isAvailable()) {
@@ -215,6 +217,7 @@ export class ChargingWorker extends DaemonWorker {
     // todo: maybe move isAvailable outside of this function, availability should be checked prior to access
     public async getChargeStartThreshold(): Promise<number> {
         const bat: PowerSupplyController = await PowerSupplyController.getFirstBattery();
+        if (!bat) return undefined;
         try {
             const available: boolean = bat.chargeControlStartThreshold.isAvailable();
             if (available) {
@@ -229,6 +232,7 @@ export class ChargingWorker extends DaemonWorker {
 
     public async setChargeStartThreshold(value: number): Promise<boolean> {
         const bat: PowerSupplyController = await PowerSupplyController.getFirstBattery();
+        if (!bat) return false;
         try {
             // todo: make fully async
             const writable: boolean = bat.chargeControlStartThreshold.isWritable();
@@ -247,6 +251,7 @@ export class ChargingWorker extends DaemonWorker {
     // todo: maybe move isAvailable outside of this function, availability should be checked prior to access
     public async getChargeEndThreshold(): Promise<number> {
         const bat: PowerSupplyController = await PowerSupplyController.getFirstBattery();
+        if (!bat) return undefined;
         try {
             const available: boolean = bat.chargeControlEndThreshold.isAvailable();
             if (available) {
@@ -255,12 +260,13 @@ export class ChargingWorker extends DaemonWorker {
             return -1;
         } catch (err: unknown) {
             console.error(`ChargingWorker: getChargeEndThreshold failed => ${err}`);
-            undefined;
+            return undefined;
         }
     }
 
     public async setChargeEndThreshold(value: number): Promise<boolean> {
         const bat: PowerSupplyController = await PowerSupplyController.getFirstBattery();
+        if (!bat) return false;
         try {
             // todo: make fully async
             const writable: boolean = bat.chargeControlEndThreshold.isWritable();
@@ -279,6 +285,7 @@ export class ChargingWorker extends DaemonWorker {
     // todo: maybe move isAvailable outside of this function, availability should be checked prior to access
     public async getChargeType(): Promise<string> {
         const bat: PowerSupplyController = await PowerSupplyController.getFirstBattery();
+        if (!bat) return '';
         try {
             // todo: make fully async
             const available: boolean = bat.chargeType.isAvailable();
@@ -294,6 +301,7 @@ export class ChargingWorker extends DaemonWorker {
 
     public async setChargeType(chargeType: ChargeType): Promise<boolean> {
         const bat: PowerSupplyController = await PowerSupplyController.getFirstBattery();
+        if (!bat) return false;
         try {
             // todo: make fully async
             const writable: boolean = bat.chargeType.isWritable();

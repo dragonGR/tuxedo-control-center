@@ -65,8 +65,8 @@ export class StateSwitcherWorker extends DaemonWorker {
     public async onWork(): Promise<void> {
         // Check state and switch profile if appropriate
         const newState: ProfileStates = determineState();
-        const oldActiveProfileId: string = this.tccd.activeProfile.id;
-        const oldActiveProfileName: string = this.tccd.activeProfile.name;
+        const oldActiveProfileId: string = this.tccd.activeProfile?.id;
+        const oldActiveProfileName: string = this.tccd.activeProfile?.name;
 
         const newStateProfileId: string = this.tccd.settings.stateMap[newState.toString()];
 

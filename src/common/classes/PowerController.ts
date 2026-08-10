@@ -34,10 +34,18 @@ export class PowerController {
 
     public getCurrentPower(): number {
         if (!this.RAPLPowerStatus) return -1;
-        const energyIncrement: number = this.intelRAPL.getEnergy() - this.currentEnergy;
+        const current: number = this.intelRAPL.getEnergy();
+        if (this.currentEnergy === 0) {
+            this.currentEnergy = current;
+            return -1;
+        }
+        let energyIncrement: number = current - this.currentEnergy;
+        if (energyIncrement < 0) {
+            energyIncrement += 4294967296;
+        }
         const delay: number = this.getDelay();
-        const powerDraw: number = delay && this.currentEnergy > 0 ? energyIncrement / delay / 1000000 : -1;
-        this.currentEnergy += energyIncrement;
+        const powerDraw: number = delay > 0 ? energyIncrement / delay / 1000000 : -1;
+        this.currentEnergy = current;
         return powerDraw;
     }
 

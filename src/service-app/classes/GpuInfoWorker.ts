@@ -129,7 +129,7 @@ export class GpuInfoWorker extends DaemonWorker {
     }
 
     private getCurrentPower(): number {
-        return this.intelPowerWorker.getCurrentPower();
+        return this.intelPowerWorker?.getCurrentPower() ?? -1;
     }
 
     public async getAmdIGpuValues(iGpuValues: IiGpuInfo): Promise<IiGpuInfo> {

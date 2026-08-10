@@ -56,6 +56,7 @@ export class UserConfig {
                 throw err;
             }
         }
+        this.validateValues();
         this.data[property] = value;
         await this.writeConfig();
         await this.setProgressDone();
@@ -74,6 +75,7 @@ export class UserConfig {
                 throw err;
             }
         }
+        this.validateValues();
         await this.setProgressDone();
         return this.data[property];
     }
@@ -97,17 +99,17 @@ export class UserConfig {
             (resolve: (value: void | PromiseLike<void>) => void, reject: (reason?: unknown) => void): void => {
                 fs.readFile(this.configFile, (err: unknown, data: Buffer): void => {
                     if (err) {
-                        reject(err);
+                        return reject(err);
                     }
 
                     try {
                         this.data = JSON.parse(data.toString());
                         this.validateValues();
-                        resolve();
+                        return resolve();
                     } catch (err: unknown) {
                         console.error(`UserConfig: readConfig failed => ${err}`);
                         this.data = {};
-                        resolve();
+                        return resolve();
                     }
                 });
             },
@@ -115,8 +117,8 @@ export class UserConfig {
     }
 
     private validateValues(): void {
-        if (this.data === undefined) {
-            this.data = JSON.parse('{}');
+        if (this.data === undefined || this.data === null) {
+            this.data = {};
         }
     }
 }
