@@ -49,9 +49,7 @@ function getWebcamCtrlPythonPath(): string {
 
 export const webcamHandlers: Map<string, (...args: any[]) => any> = new Map<string, (...args: any[]) => any>()
     .set(WebcamAPIFunctions.settingWebcamWithLoading, async (arg: any): Promise<void> => {
-        if (webcamWindow !== null) {
-            webcamWindow.webContents.send('setting-webcam-with-loading', arg);
-        }
+        webcamWindow?.webContents?.send('setting-webcam-with-loading', arg);
     })
 
     .set(WebcamAPIFunctions.createWebcamPreview, (arg: WebcamConstraints): void => {
@@ -75,11 +73,11 @@ export const webcamHandlers: Map<string, (...args: any[]) => any> = new Map<stri
     })
 
     .set(WebcamAPIFunctions.applyControls, (): void => {
-        tccWindow.webContents.send('apply-controls');
+        tccWindow?.webContents?.send('apply-controls');
     })
 
     .set(WebcamAPIFunctions.videoEnded, (): void => {
-        tccWindow.webContents.send('video-ended');
+        tccWindow?.webContents?.send('video-ended');
     })
 
     .set(WebcamAPIFunctions.readv4l2Values, (path: string): Promise<string[][]> => {
@@ -166,13 +164,15 @@ export const webcamHandlers: Map<string, (...args: any[]) => any> = new Map<stri
     )
 
     .set(WebcamAPIFunctions.getWebcamPaths, async (): Promise<string> => {
-        const result: { data: string; error: unknown } = await execFile(`python3 ${getWebcamCtrlPythonPath()} -i`);
-
-        if (result.error) {
-            throw 'webcamAPI: getWebcamPaths failed';
+        try {
+            const result: { data: string; error: unknown } = await execFile(`python3 ${getWebcamCtrlPythonPath()} -i`);
+            if (result.error) {
+                return '';
+            }
+            return result.data;
+        } catch (_err: unknown) {
+            return '';
         }
-
-        return result.data;
     })
 
     .set(WebcamAPIFunctions.writeConfig, (webcamSettings: WebcamPreset[]): Promise<boolean> => {

@@ -56,7 +56,7 @@ async function getSystemInfos(): Promise<Buffer> {
 }
 
 function updateSystemInfosLabel(text: string): void {
-    tccWindow.webContents.send('update-systeminfos-label', text);
+    tccWindow?.webContents?.send('update-systeminfos-label', text);
 }
 
 async function runSystemInfos(ticketNumber: string): Promise<void> {

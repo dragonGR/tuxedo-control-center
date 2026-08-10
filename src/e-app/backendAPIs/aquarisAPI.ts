@@ -231,8 +231,8 @@ export const aquarisHandlers: Map<string, (...args: any[]) => any> = new Map<str
         } else {
             await aquaris.disconnect();
         }
-        aquarisStateExpected.deviceUUID = undefined;
-        aquarisStateCurrent.deviceUUID = undefined;
+        if (aquarisStateExpected) aquarisStateExpected.deviceUUID = undefined;
+        if (aquarisStateCurrent) aquarisStateCurrent.deviceUUID = undefined;
     })
 
     .set(AquarisAPIFunctions.isConnected, async (): Promise<boolean> => {
@@ -273,6 +273,7 @@ export const aquarisHandlers: Map<string, (...args: any[]) => any> = new Map<str
     .set(
         AquarisAPIFunctions.updateLED,
         async (red: number, green: number, blue: number, state: RGBState | number): Promise<void> => {
+            if (!aquarisStateExpected) return;
             aquarisStateExpected.red = red;
             aquarisStateExpected.green = green;
             aquarisStateExpected.blue = blue;
@@ -283,17 +284,20 @@ export const aquarisHandlers: Map<string, (...args: any[]) => any> = new Map<str
     )
 
     .set(AquarisAPIFunctions.writeRGBOff, async (): Promise<void> => {
+        if (!aquarisStateExpected) return;
         aquarisStateExpected.ledOn = false;
         await updateDeviceState(aquaris, aquarisStateCurrent, aquarisStateExpected);
     })
 
     .set(AquarisAPIFunctions.writeFanMode, async (dutyCyclePercent: number): Promise<void> => {
+        if (!aquarisStateExpected) return;
         aquarisStateExpected.fanDutyCycle = dutyCyclePercent;
         aquarisStateExpected.fanOn = true;
         await updateDeviceState(aquaris, aquarisStateCurrent, aquarisStateExpected);
     })
 
     .set(AquarisAPIFunctions.writeFanOff, async (): Promise<void> => {
+        if (!aquarisStateExpected) return;
         aquarisStateExpected.fanOn = false;
         await updateDeviceState(aquaris, aquarisStateCurrent, aquarisStateExpected);
     })
@@ -301,6 +305,7 @@ export const aquarisHandlers: Map<string, (...args: any[]) => any> = new Map<str
     .set(
         AquarisAPIFunctions.writePumpMode,
         async (dutyCyclePercent: number, voltage: PumpVoltage | number): Promise<void> => {
+            if (!aquarisStateExpected) return;
             aquarisStateExpected.pumpDutyCycle = dutyCyclePercent;
             aquarisStateExpected.pumpVoltage = voltage;
             aquarisStateExpected.pumpOn = true;
@@ -309,6 +314,7 @@ export const aquarisHandlers: Map<string, (...args: any[]) => any> = new Map<str
     )
 
     .set(AquarisAPIFunctions.writePumpOff, async (): Promise<void> => {
+        if (!aquarisStateExpected) return;
         aquarisStateExpected.pumpOn = false;
         await updateDeviceState(aquaris, aquarisStateCurrent, aquarisStateExpected);
     })

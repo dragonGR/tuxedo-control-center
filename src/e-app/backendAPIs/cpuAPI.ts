@@ -35,6 +35,10 @@ ipcMain.handle('get-general-cpu-info-async', (_event: IpcMainInvokeEvent): Promi
             reject: (reason?: unknown) => void,
         ): void => {
             try {
+                if (!cpu.cores || cpu.cores.length === 0) {
+                    resolve(undefined);
+                    return;
+                }
                 let cpuInfo: IGeneralCPUInfo;
                 const scalingDriver: string = cpu.cores[0].scalingDriver.readValueNT();
                 try {
@@ -256,8 +260,9 @@ ipcMain.handle('get-intel-pstate-turbo-value-async', (_event: IpcMainInvokeEvent
             try {
                 if (cpu.intelPstate.noTurbo.isAvailable()) {
                     resolve(cpu.intelPstate.noTurbo.readValueNT());
+                } else {
+                    resolve(false);
                 }
-                resolve(false);
             } catch (err: unknown) {
                 console.error(`cpuAPI: get-intel-pstate-turbo-value-async failed => ${err}`);
                 reject(err);

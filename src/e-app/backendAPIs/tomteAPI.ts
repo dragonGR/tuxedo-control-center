@@ -154,7 +154,9 @@ export const tomteHandlers: Map<string, (...args: any[]) => any> = new Map<strin
     .set(TomteAPIFunctions.getModuleDescription, (moduleName: string, langId: string): Promise<string> => {
         return new Promise<string>(
             (resolve: (value: string | PromiseLike<string>) => void, _reject: (reason?: unknown) => void): void => {
-                resolve(getModuleDescription(moduleName, langId));
+                getModuleDescription(moduleName, langId)
+                    .then(resolve)
+                    .catch((_err: unknown) => resolve(''));
             },
         );
     })
