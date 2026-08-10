@@ -17,6 +17,8 @@
  * along with TUXEDO Control Center.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { IDeviceCounts } from '../../common/models/TccGpuValues';
 import { amdDGpuDeviceIdString, amdIGpuDeviceIdString } from './AmdDeviceIDs';
 import { intelIGpuDeviceIdString } from './IntelDeviceIDs';
@@ -58,29 +60,57 @@ export class AvailabilityService {
         };
     }
 
-    // using || to return a success code to avoid throwing an error in execCmdSync and : means no-op
     private countDevicesMatchingPattern(pattern: string): number {
-        const grepCmd = `grep -lP '${pattern}' /sys/bus/pci/devices/*/uevent || :`;
-        const output: string = execCommandSync(grepCmd);
-        return countLines(output);
+        const pciDir = '/sys/bus/pci/devices';
+        if (!fs.existsSync(pciDir)) {
+            return 0;
+        }
+        try {
+            const devices: string[] = fs.readdirSync(pciDir);
+            const regex = new RegExp(pattern);
+            let count = 0;
+            for (const dev of devices) {
+                const ueventPath = path.join(pciDir, dev, 'uevent');
+                if (fs.existsSync(ueventPath)) {
+                    try {
+                        const content: string = fs.readFileSync(ueventPath, 'utf8');
+                        if (regex.test(content)) {
+                            count++;
+                        }
+                    } catch (_err: unknown) {}
+                }
+            }
+            return count;
+        } catch (_err: unknown) {
+            return 0;
+        }
     }
 
     private countNvidiaDevices(): number {
-        const nvidiaVendorId = '10DE';
-        const grepCmd = `grep -lx '0x${nvidiaVendorId.toLowerCase()}' /sys/bus/pci/devices/*/vendor || :`;
-        const output: string = execCommandSync(grepCmd);
-
-        // count multiple paths as one
-        // example: "0000:01:00.1" and "0000:01:00.2" belong to the device "0000:01:00"
-        const distinctPaths: string[] = [
-            ...new Set(
-                output.match(/\/sys\/bus\/pci\/devices\/([^\s]+)/g)?.map((path: string): string => {
-                    const prefix: string = path.split('/')[5];
-                    return prefix.substring(0, prefix.lastIndexOf('.'));
-                }),
-            ),
-        ];
-        return distinctPaths?.length || 0;
+        const pciDir = '/sys/bus/pci/devices';
+        if (!fs.existsSync(pciDir)) {
+            return 0;
+        }
+        try {
+            const devices: string[] = fs.readdirSync(pciDir);
+            const distinctBuses = new Set<string>();
+            for (const dev of devices) {
+                const vendorPath = path.join(pciDir, dev, 'vendor');
+                if (fs.existsSync(vendorPath)) {
+                    try {
+                        const vendorId: string = fs.readFileSync(vendorPath, 'utf8').trim().toLowerCase();
+                        if (vendorId === '0x10de') {
+                            const dotIndex: number = dev.lastIndexOf('.');
+                            const baseDev: string = dotIndex !== -1 ? dev.substring(0, dotIndex) : dev;
+                            distinctBuses.add(baseDev);
+                        }
+                    } catch (_err: unknown) {}
+                }
+            }
+            return distinctBuses.size;
+        } catch (_err: unknown) {
+            return 0;
+        }
     }
 
     public isIGpuAvailable(): boolean {

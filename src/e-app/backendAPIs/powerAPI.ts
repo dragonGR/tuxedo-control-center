@@ -17,6 +17,7 @@
  * along with TUXEDO Control Center.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron';
 import { ipcMain } from 'electron';
@@ -72,8 +73,24 @@ function getBusPath(driver: string): string {
     }
 
     if (devicePattern) {
-        const grepCmd = `grep -lx '${devicePattern}' /sys/bus/pci/devices/*/uevent | sed 's|/uevent||'`;
-        return execCmdSync(grepCmd).trim();
+        const pciDir = '/sys/bus/pci/devices';
+        if (!fs.existsSync(pciDir)) {
+            return undefined;
+        }
+        try {
+            const devices: string[] = fs.readdirSync(pciDir);
+            for (const dev of devices) {
+                const ueventPath = path.join(pciDir, dev, 'uevent');
+                if (fs.existsSync(ueventPath)) {
+                    try {
+                        const lines: string[] = fs.readFileSync(ueventPath, 'utf8').split('\n');
+                        if (lines.some((l: string): boolean => l.trim() === devicePattern)) {
+                            return path.join(pciDir, dev);
+                        }
+                    } catch (_err: unknown) {}
+                }
+            }
+        } catch (_err: unknown) {}
     }
     return undefined;
 }

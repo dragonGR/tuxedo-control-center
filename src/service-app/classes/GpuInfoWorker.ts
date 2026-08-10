@@ -17,6 +17,7 @@
  * along with TUXEDO Control Center.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { amdDGpuDeviceIdString, amdIGpuDeviceIdString } from '../../common/classes/AmdDeviceIDs';
 import type { AvailabilityService } from '../../common/classes/availability.service';
@@ -85,12 +86,37 @@ export class GpuInfoWorker extends DaemonWorker {
     public async onExit(): Promise<void> {}
 
     private async getIntelIGpuDrmPath(): Promise<string | undefined> {
-        const intelIGpuDevices: string = await execCommandAsync(
-            `grep -lP '${intelIGpuDeviceIdString}' /sys/bus/pci/devices/*/drm/card*/device/uevent | sed 's|/device/uevent$||'`,
-        );
-        const amountIntelIGpuDevices: number = countLines(intelIGpuDevices);
-
-        return amountIntelIGpuDevices === 1 ? intelIGpuDevices : undefined;
+        const pciDir = '/sys/bus/pci/devices';
+        if (!fs.existsSync(pciDir)) {
+            return undefined;
+        }
+        try {
+            const devices: string[] = fs.readdirSync(pciDir);
+            const regex = new RegExp(intelIGpuDeviceIdString);
+            const matches: string[] = [];
+            for (const dev of devices) {
+                const drmPath = path.join(pciDir, dev, 'drm');
+                if (fs.existsSync(drmPath)) {
+                    try {
+                        const cards: string[] = fs.readdirSync(drmPath);
+                        for (const card of cards) {
+                            if (card.startsWith('card')) {
+                                const ueventFile = path.join(drmPath, card, 'device', 'uevent');
+                                if (fs.existsSync(ueventFile)) {
+                                    const content: string = fs.readFileSync(ueventFile, 'utf8');
+                                    if (regex.test(content)) {
+                                        matches.push(path.join(drmPath, card));
+                                    }
+                                }
+                            }
+                        }
+                    } catch (_err: unknown) {}
+                }
+            }
+            return matches.length === 1 ? matches[0] : undefined;
+        } catch (_err: unknown) {
+            return undefined;
+        }
     }
 
     public async getIGPUValues(): Promise<void> {
@@ -172,17 +198,45 @@ export class GpuInfoWorker extends DaemonWorker {
     }
 
     private parseMaxAmdFreq(s: string): number {
-        const mhzNumbers: number[] = s.match(/\d+Mhz/g).map((str: string): number => Number.parseInt(str, 10));
+        if (!s) {
+            return -1;
+        }
+        const matches: RegExpMatchArray | null = s.match(/\d+Mhz/gi);
+        if (!matches || matches.length === 0) {
+            return -1;
+        }
+        const mhzNumbers: number[] = matches.map((str: string): number => Number.parseInt(str, 10));
         return Math.max(...mhzNumbers);
     }
 
     private async getAmdIGpuHwmonPath(): Promise<string | undefined> {
-        const amdIGpuDevices: string = await execCommandAsync(
-            `grep -lP '${amdIGpuDeviceIdString}' /sys/class/hwmon/*/device/uevent | sed 's|/device/uevent$||'`,
-        );
-        const amountAmdIGpuDevices: number = countLines(amdIGpuDevices);
+        return this.findHwmonPathForPattern(amdIGpuDeviceIdString);
+    }
 
-        return amountAmdIGpuDevices === 1 ? amdIGpuDevices : undefined;
+    private findHwmonPathForPattern(pattern: string): string | undefined {
+        const hwmonDir = '/sys/class/hwmon';
+        if (!fs.existsSync(hwmonDir)) {
+            return undefined;
+        }
+        try {
+            const entries: string[] = fs.readdirSync(hwmonDir);
+            const regex = new RegExp(pattern);
+            const matches: string[] = [];
+            for (const entry of entries) {
+                const ueventFile = path.join(hwmonDir, entry, 'device', 'uevent');
+                if (fs.existsSync(ueventFile)) {
+                    try {
+                        const content: string = fs.readFileSync(ueventFile, 'utf8');
+                        if (regex.test(content)) {
+                            matches.push(path.join(hwmonDir, entry));
+                        }
+                    } catch (_err: unknown) {}
+                }
+            }
+            return matches.length === 1 ? matches[0] : undefined;
+        } catch (_err: unknown) {
+            return undefined;
+        }
     }
 
     public async getDGPUValues(): Promise<void> {
@@ -218,7 +272,39 @@ export class GpuInfoWorker extends DaemonWorker {
         }
     }
 
+    private isNvidiaDGpuActive(): boolean {
+        const pciDir = '/sys/bus/pci/devices';
+        if (!fs.existsSync(pciDir)) {
+            return true;
+        }
+        try {
+            const devices: string[] = fs.readdirSync(pciDir);
+            for (const dev of devices) {
+                const vendorPath = path.join(pciDir, dev, 'vendor');
+                if (fs.existsSync(vendorPath)) {
+                    try {
+                        const vendorId: string = fs.readFileSync(vendorPath, 'utf8').trim().toLowerCase();
+                        if (vendorId === '0x10de') {
+                            const runtimeStatusPath = path.join(pciDir, dev, 'power', 'runtime_status');
+                            if (fs.existsSync(runtimeStatusPath)) {
+                                const status: string = fs.readFileSync(runtimeStatusPath, 'utf8').trim();
+                                if (status !== 'active') {
+                                    return false;
+                                }
+                            }
+                        }
+                    } catch (_err: unknown) {}
+                }
+            }
+        } catch (_err: unknown) {}
+        return true;
+    }
+
     private async getNvidiaDGpuPowerValues(): Promise<IdGpuInfo> {
+        if (!this.isNvidiaDGpuActive()) {
+            return this.getDefaultValuesDGpu();
+        }
+
         const command =
             'nvidia-smi --query-gpu=power.draw,power.max_limit,enforced.power.limit,clocks.gr,clocks.max.gr --format=csv,noheader';
 
@@ -289,12 +375,7 @@ export class GpuInfoWorker extends DaemonWorker {
     }
 
     private async getAmdDGpuHwmonPath(): Promise<string | undefined> {
-        const amdDGpuDevices: string = await execCommandAsync(
-            `grep -lP '${amdDGpuDeviceIdString}' /sys/class/hwmon/*/device/uevent | sed 's|/device/uevent$||'`,
-        );
-        const amountAmdDGpuDevices: number = countLines(amdDGpuDevices);
-
-        return amountAmdDGpuDevices === 1 ? amdDGpuDevices : undefined;
+        return this.findHwmonPathForPattern(amdDGpuDeviceIdString);
     }
 
     private getDefaultValuesDGpu(): IdGpuInfo {
