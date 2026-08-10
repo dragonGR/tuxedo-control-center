@@ -51,10 +51,14 @@ export class ShutdownTimerComponent implements OnInit {
 
     public async deleteTime(): Promise<void> {
         this.utils.pageDisabled = true;
-        window.ipc.cancelShutdown().then((): void => {
-            this.updateTime();
+        try {
+            await window.ipc.cancelShutdown();
+            await this.updateTime();
+        } catch (err: unknown) {
+            console.error(`shutdown-timer: deleteTime failed => ${err}`);
+        } finally {
             this.utils.pageDisabled = false;
-        });
+        }
     }
 
     public async updateTime(): Promise<void> {

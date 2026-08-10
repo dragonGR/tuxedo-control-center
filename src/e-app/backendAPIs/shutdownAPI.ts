@@ -25,17 +25,15 @@ import { execCmd } from './utilsAPI';
 ipcMain.handle(
     'set-shutdown-time',
     async (_event: IpcMainInvokeEvent, selectedHour: number, selectedMinute: number): Promise<string> => {
-        return new Promise<string>(
-            (resolve: (value: string | PromiseLike<string>) => void, _reject: (reason?: unknown) => void): void => {
-                execCmd(`pkexec shutdown -h ${selectedHour}:${selectedMinute}`)
-                    .then((results: string) => {
-                        resolve(results);
-                    })
-                    .catch((): void => {
-                        resolve('');
-                    });
-            },
-        );
+        const hour: number = Math.max(0, Math.min(23, Number(selectedHour) || 0));
+        const minute: number = Math.max(0, Math.min(59, Number(selectedMinute) || 0));
+        const formattedTime: string = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+        try {
+            return await execCmd(`pkexec shutdown -h ${formattedTime}`);
+        } catch (err: unknown) {
+            console.error(`shutdownAPI: set-shutdown-time failed => ${err}`);
+            return '';
+        }
     },
 );
 
