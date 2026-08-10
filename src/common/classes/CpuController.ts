@@ -139,7 +139,11 @@ export class CpuController {
      */
     // todo: function too long
     public setGovernorScalingMaxFrequency(setMaxFrequency?: number): void {
-        let scalingDriver: string;
+        let primaryScalingDriver: string | undefined;
+
+        if (this.cores?.length > 0 && this.cores[0].scalingDriver.isAvailable()) {
+            primaryScalingDriver = this.cores[0].scalingDriver.readValueNT();
+        }
 
         for (const core of this.cores) {
             if (
@@ -150,29 +154,33 @@ export class CpuController {
             ) {
                 continue;
             }
-            if (core.coreIndex !== 0 && !core.online.readValue()) {
+            if (core.coreIndex !== 0 && !core.online.readValueNT()) {
                 continue;
             }
-            //const coreMinFrequency = core.cpuinfoMinFreq.readValue();
-            const coreMaxFrequency: number = core.cpuinfoMaxFreq.readValue();
-            const scalingMinFrequency: number = core.scalingMinFreq.readValue();
 
-            const scalingFrequencyAvailable: boolean = this.cores[0].scalingAvailableFrequencies.isAvailable();
-            let availableFrequencies: number[];
-            if (scalingFrequencyAvailable) {
+            const coreMaxFrequency: number = core.cpuinfoMaxFreq.readValueNT();
+            const scalingMinFrequency: number = core.scalingMinFreq.readValueNT();
+
+            if (coreMaxFrequency === undefined || scalingMinFrequency === undefined) {
+                continue;
+            }
+
+            let availableFrequencies: number[] | undefined;
+            if (core.scalingAvailableFrequencies.isAvailable()) {
                 availableFrequencies = core.scalingAvailableFrequencies.readValueNT();
             }
-            const scalingDriverAvailable: boolean = core.scalingDriver.isAvailable();
-            if (scalingDriverAvailable) {
-                scalingDriver = core.scalingDriver.readValueNT();
-            }
+
+            const coreScalingDriver: string | undefined = core.scalingDriver.isAvailable()
+                ? core.scalingDriver.readValueNT()
+                : primaryScalingDriver;
+
             let newMaxFrequency: number;
 
             // Default to max available
             if (setMaxFrequency === undefined) {
                 newMaxFrequency = coreMaxFrequency;
             } else if (setMaxFrequency === FrequencyConfig.ReducedFrequency) {
-                if (this.boost.isAvailable() && scalingDriver === ScalingDriver.acpi_cpufreq) {
+                if (this.boost.isAvailable() && coreScalingDriver === ScalingDriver.acpi_cpufreq) {
                     newMaxFrequency = coreMaxFrequency;
                 } else {
                     newMaxFrequency = core.getReducedAvailableFreq();
@@ -200,29 +208,38 @@ export class CpuController {
                 newMaxFrequency = findClosestValue(newMaxFrequency, availableFrequencies);
             }
 
-            if (core.scalingMaxFreq.readValue() !== newMaxFrequency) {
-                core.scalingMaxFreq.writeValue(newMaxFrequency);
+            if (core.scalingMaxFreq.readValueNT() !== newMaxFrequency) {
+                try {
+                    core.scalingMaxFreq.writeValue(newMaxFrequency);
+                } catch (err: unknown) {
+                    console.error(
+                        `CpuController: setGovernorScalingMaxFrequency failed on core ${core.coreIndex} => ${err}`,
+                    );
+                }
             }
         }
 
         // AMD does not count boost frequency to coreMaxFrequency while Intel does. So on AMD a setMaxFrequency over
         // coreMaxFrequency indicates that the boost switch should be enabled. On Intel this switch doesn't exist
         // and boost is handled via scalingMaxFreq.
-        const maxFrequency: number = this.cores[0].cpuinfoMaxFreq.readValue();
-        let maximumAvailableFrequency: number = maxFrequency;
+        if (this.cores?.length > 0 && this.boost.isAvailable() && primaryScalingDriver === ScalingDriver.acpi_cpufreq) {
+            const maxFrequency: number = this.cores[0].cpuinfoMaxFreq.readValueNT();
+            let maximumAvailableFrequency: number = maxFrequency ?? 0;
 
-        const scalingFrequencyAvailable: boolean = this.cores[0].scalingAvailableFrequencies.isAvailable();
-        if (scalingFrequencyAvailable) {
-            const availableFrequencies: number[] = this.cores[0].scalingAvailableFrequencies.readValueNT();
-            if (availableFrequencies !== undefined) {
-                maximumAvailableFrequency = availableFrequencies[0];
+            if (this.cores[0].scalingAvailableFrequencies.isAvailable()) {
+                const availableFrequencies: number[] = this.cores[0].scalingAvailableFrequencies.readValueNT();
+                if (availableFrequencies !== undefined && availableFrequencies.length > 0) {
+                    maximumAvailableFrequency = availableFrequencies[0];
+                }
             }
-        }
 
-        if (this.boost.isAvailable() && scalingDriver === ScalingDriver.acpi_cpufreq) {
             const targetBoost: boolean = setMaxFrequency === undefined || setMaxFrequency > maximumAvailableFrequency;
-            if (this.boost.readValue() !== targetBoost) {
-                this.boost.writeValue(targetBoost);
+            if (this.boost.readValueNT() !== targetBoost) {
+                try {
+                    this.boost.writeValue(targetBoost);
+                } catch (err: unknown) {
+                    console.error(`CpuController: setGovernorScalingMaxFrequency failed to write boost => ${err}`);
+                }
             }
         }
     }
