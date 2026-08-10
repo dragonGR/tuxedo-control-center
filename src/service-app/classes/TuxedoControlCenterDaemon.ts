@@ -137,10 +137,14 @@ export class TuxedoControlCenterDaemon extends SingleProcess {
         // Start continuous work for each worker with individual interval
         for (const worker of this.workers) {
             worker.timer = setInterval(async (): Promise<void> => {
+                if (worker.isWorking) return;
+                worker.isWorking = true;
                 try {
                     await worker.work();
                 } catch (err: unknown) {
                     console.error(`TuxedoControlCenterDaemon: Failed executing onWork() of ${worker.name} => ${err}`);
+                } finally {
+                    worker.isWorking = false;
                 }
             }, worker.timeout);
         }

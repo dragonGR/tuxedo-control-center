@@ -327,88 +327,94 @@ export class TccDBusClientService implements OnDestroy {
         await Promise.all(promiseArray);
     }
 
+    private isUpdating: boolean = false;
     private async dbusUpdate(): Promise<void> {
-        const dbusAvailable: boolean = await window.dbusAPI.dbusAvailable();
-        const wasAvailable: boolean = this.isDbusAvailable;
+        if (this.isUpdating) return;
+        this.isUpdating = true;
+        try {
+            const dbusAvailable: boolean = await window.dbusAPI.dbusAvailable();
+            const wasAvailable: boolean = this.isDbusAvailable;
 
-        this.dbusAvailable.next(dbusAvailable);
-        this.isDbusAvailable = dbusAvailable;
+            this.dbusAvailable.next(dbusAvailable);
+            this.isDbusAvailable = dbusAvailable;
 
-        if (!dbusAvailable) {
-            if (wasAvailable) {
-                console.error('tcc-dbus-client: dbusUpdate: dbus not available');
-            }
-            return;
-        }
-
-        await this.getDbusData();
-        this.hasAquaris = await window.comp.getHasAquaris();
-
-        const nextODMProfilesAvailable: string[] = await window.dbusAPI.odmProfilesAvailable();
-        this.odmProfilesAvailable.next(nextODMProfilesAvailable !== undefined ? nextODMProfilesAvailable : []);
-        // TODO
-        const nextODMPowerLimitsJSON: string = await window.dbusAPI.odmPowerLimitsJSON();
-        if (nextODMPowerLimitsJSON) {
-            const nextODMPowerLimits: TDPInfo[] = JSON.parse(nextODMPowerLimitsJSON);
-            this.odmPowerLimits.next(nextODMPowerLimits !== undefined ? nextODMPowerLimits : []);
-        }
-
-        // Retrieve and parse profiles
-        const activeProfileJSON: string = await window.dbusAPI.getActiveProfileJSON();
-        if (activeProfileJSON !== undefined) {
-            if (activeProfileJSON === undefined) {
-                console.log('tcc-dbus-client: dbusUpdate: unexpected error => no active profile');
-            }
-            try {
-                const activeProfile: TccProfile = JSON.parse(activeProfileJSON);
-                // this.utils.fillDefaultValuesProfile(activeProfile);
-                if (this.previousActiveProfileJSON !== activeProfileJSON) {
-                    this.utils.fillDefaultProfileTexts(activeProfile);
-                    this.activeProfile.next(activeProfile);
-                    this.previousActiveProfileJSON = activeProfileJSON;
+            if (!dbusAvailable) {
+                if (wasAvailable) {
+                    console.error('tcc-dbus-client: dbusUpdate: dbus not available');
                 }
-            } catch (err: unknown) {
-                console.error(`tcc-dbus-client: dbusUpdate: unexpected error parsing profile => ${err}`);
-            }
-        }
-
-        const defaultProfilesJSON: string = await window.dbusAPI.getDefaultProfilesJSON();
-        const defaultValuesProfileJSON: string = await window.dbusAPI.getDefaultValuesProfileJSON();
-        const customProfilesJSON: string = await window.dbusAPI.getCustomProfilesJSON();
-        if (
-            defaultProfilesJSON !== undefined &&
-            defaultValuesProfileJSON !== undefined &&
-            customProfilesJSON !== undefined
-        ) {
-            try {
-                if (this.previousDefaultProfilesJSON !== defaultProfilesJSON) {
-                    this.defaultProfiles.next(JSON.parse(defaultProfilesJSON));
-                    this.previousDefaultProfilesJSON = defaultProfilesJSON;
-                }
-                if (this.previousCustomProfilesJSON !== customProfilesJSON) {
-                    this.customProfiles.next(JSON.parse(customProfilesJSON));
-                    this.previousCustomProfilesJSON = customProfilesJSON;
-                }
-                if (this.previousDefaultValuesProfileJSON !== defaultValuesProfileJSON) {
-                    this.defaultValuesProfile.next(JSON.parse(defaultValuesProfileJSON));
-                    this.previousDefaultValuesProfileJSON = defaultValuesProfileJSON;
-                }
-            } catch (err: unknown) {
-                console.error(`tcc-dbus-client: dbusUpdate: unexpected error parsing profile lists => ${err}`);
+                return;
             }
 
-            this.dataLoaded = true;
-        }
-        const settingsJSON: string = await window.dbusAPI.getSettingsJSON();
-        if (settingsJSON !== undefined) {
-            try {
-                if (this.previousSettingsJSON !== settingsJSON) {
-                    this.settings.next(JSON.parse(settingsJSON));
-                    this.previousSettingsJSON = settingsJSON;
-                }
-            } catch (err: unknown) {
-                console.error(`tcc-dbus-client: dbusUpdate: unexpected error parsing settings => ${err}`);
+            await this.getDbusData();
+            this.hasAquaris = await window.comp.getHasAquaris();
+
+            const nextODMProfilesAvailable: string[] = await window.dbusAPI.odmProfilesAvailable();
+            this.odmProfilesAvailable.next(nextODMProfilesAvailable !== undefined ? nextODMProfilesAvailable : []);
+
+            const nextODMPowerLimitsJSON: string = await window.dbusAPI.odmPowerLimitsJSON();
+            if (nextODMPowerLimitsJSON) {
+                const nextODMPowerLimits: TDPInfo[] = JSON.parse(nextODMPowerLimitsJSON);
+                this.odmPowerLimits.next(nextODMPowerLimits !== undefined ? nextODMPowerLimits : []);
             }
+
+            // Retrieve and parse profiles
+            const activeProfileJSON: string = await window.dbusAPI.getActiveProfileJSON();
+            if (activeProfileJSON !== undefined) {
+                if (activeProfileJSON === undefined) {
+                    console.log('tcc-dbus-client: dbusUpdate: unexpected error => no active profile');
+                }
+                try {
+                    const activeProfile: TccProfile = JSON.parse(activeProfileJSON);
+                    if (this.previousActiveProfileJSON !== activeProfileJSON) {
+                        this.utils.fillDefaultProfileTexts(activeProfile);
+                        this.activeProfile.next(activeProfile);
+                        this.previousActiveProfileJSON = activeProfileJSON;
+                    }
+                } catch (err: unknown) {
+                    console.error(`tcc-dbus-client: dbusUpdate: unexpected error parsing profile => ${err}`);
+                }
+            }
+
+            const defaultProfilesJSON: string = await window.dbusAPI.getDefaultProfilesJSON();
+            const defaultValuesProfileJSON: string = await window.dbusAPI.getDefaultValuesProfileJSON();
+            const customProfilesJSON: string = await window.dbusAPI.getCustomProfilesJSON();
+            if (
+                defaultProfilesJSON !== undefined &&
+                defaultValuesProfileJSON !== undefined &&
+                customProfilesJSON !== undefined
+            ) {
+                try {
+                    if (this.previousDefaultProfilesJSON !== defaultProfilesJSON) {
+                        this.defaultProfiles.next(JSON.parse(defaultProfilesJSON));
+                        this.previousDefaultProfilesJSON = defaultProfilesJSON;
+                    }
+                    if (this.previousCustomProfilesJSON !== customProfilesJSON) {
+                        this.customProfiles.next(JSON.parse(customProfilesJSON));
+                        this.previousCustomProfilesJSON = customProfilesJSON;
+                    }
+                    if (this.previousDefaultValuesProfileJSON !== defaultValuesProfileJSON) {
+                        this.defaultValuesProfile.next(JSON.parse(defaultValuesProfileJSON));
+                        this.previousDefaultValuesProfileJSON = defaultValuesProfileJSON;
+                    }
+                } catch (err: unknown) {
+                    console.error(`tcc-dbus-client: dbusUpdate: unexpected error parsing profile lists => ${err}`);
+                }
+
+                this.dataLoaded = true;
+            }
+            const settingsJSON: string = await window.dbusAPI.getSettingsJSON();
+            if (settingsJSON !== undefined) {
+                try {
+                    if (this.previousSettingsJSON !== settingsJSON) {
+                        this.settings.next(JSON.parse(settingsJSON));
+                        this.previousSettingsJSON = settingsJSON;
+                    }
+                } catch (err: unknown) {
+                    console.error(`tcc-dbus-client: dbusUpdate: unexpected error parsing settings => ${err}`);
+                }
+            }
+        } finally {
+            this.isUpdating = false;
         }
     }
 

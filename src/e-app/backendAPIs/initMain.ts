@@ -220,24 +220,30 @@ async function initMain(): Promise<void> {
     if (!noTccdVersionCheck) {
         // Regularly check if running tccd version is different to running gui version
         const tccdVersionCheckInterval = 5000;
-        // todo: refactor, too many indents
+        let isCheckingVersion = false;
         setInterval(async (): Promise<void> => {
-            const dbusAvailable: boolean = await tccDBus.dbusAvailable();
-            if (dbusAvailable) {
-                const tccdVersion: string = await tccDBus.tccdVersion();
-                const baseTccdVersion: string = tccdVersion ? tccdVersion.split('-')[0] : '';
-                const baseAppVersion: string = app.getVersion() ? app.getVersion().split('-')[0] : '';
-                if (baseTccdVersion?.length > 0 && baseTccdVersion !== baseAppVersion) {
-                    console.log(`initMain: Other tccd version detected (${tccdVersion} vs ${app.getVersion()}), restarting..`);
-                    process.on('exit', (): void => {
+            if (isCheckingVersion) return;
+            isCheckingVersion = true;
+            try {
+                const dbusAvailable: boolean = await tccDBus.dbusAvailable();
+                if (dbusAvailable) {
+                    const tccdVersion: string = await tccDBus.tccdVersion();
+                    const baseTccdVersion: string = tccdVersion ? tccdVersion.split('-')[0] : '';
+                    const baseAppVersion: string = app.getVersion() ? app.getVersion().split('-')[0] : '';
+                    if (baseTccdVersion?.length > 0 && baseTccdVersion !== baseAppVersion) {
+                        console.log(`initMain: Other tccd version detected (${tccdVersion} vs ${app.getVersion()}), restarting..`);
                         child_process.spawn(process.argv[0], process.argv.slice(1).concat(['--tray']), {
                             cwd: process.cwd(),
                             detached: true,
                             stdio: 'inherit',
                         });
-                    });
-                    process.exit();
+                        process.exit();
+                    }
                 }
+            } catch (err: unknown) {
+                console.error(`initMain: tccd version check error => ${err}`);
+            } finally {
+                isCheckingVersion = false;
             }
         }, tccdVersionCheckInterval);
     }
@@ -255,8 +261,15 @@ async function initMain(): Promise<void> {
     });
 
     const profilesCheckInterval = 4000;
+    let isUpdatingProfiles = false;
     setInterval(async (): Promise<void> => {
-        updateTrayProfiles();
+        if (isUpdatingProfiles) return;
+        isUpdatingProfiles = true;
+        try {
+            await updateTrayProfiles();
+        } finally {
+            isUpdatingProfiles = false;
+        }
     }, profilesCheckInterval);
 }
 

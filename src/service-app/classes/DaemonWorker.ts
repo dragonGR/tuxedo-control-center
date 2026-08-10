@@ -29,6 +29,7 @@ export abstract class DaemonWorker {
     ) {}
 
     public timer: NodeJS.Timeout;
+    public isWorking: boolean = false;
 
     protected previousProfile: ITccProfile;
     protected activeProfile: ITccProfile;

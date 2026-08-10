@@ -47,23 +47,32 @@ export class SysFsService implements OnDestroy {
         }, this.updatePeriodMs);
     }
 
+    private isUpdating: boolean = false;
     private async periodicUpdate(): Promise<void> {
-        if (this.generalCpuInfo === undefined) {
-            this.generalCpuInfo = new BehaviorSubject(await this.getGeneralCpuInfo());
-        } else {
-            this.generalCpuInfo.next(await this.getGeneralCpuInfo());
-        }
+        if (this.isUpdating) return;
+        this.isUpdating = true;
+        try {
+            if (this.generalCpuInfo === undefined) {
+                this.generalCpuInfo = new BehaviorSubject(await this.getGeneralCpuInfo());
+            } else {
+                this.generalCpuInfo.next(await this.getGeneralCpuInfo());
+            }
 
-        if (this.logicalCoreInfo === undefined) {
-            this.logicalCoreInfo = new BehaviorSubject(await this.getLogicalCoreInfo());
-        } else {
-            this.logicalCoreInfo.next(await this.getLogicalCoreInfo());
-        }
+            if (this.logicalCoreInfo === undefined) {
+                this.logicalCoreInfo = new BehaviorSubject(await this.getLogicalCoreInfo());
+            } else {
+                this.logicalCoreInfo.next(await this.getLogicalCoreInfo());
+            }
 
-        if (this.pstateInfo === undefined) {
-            this.pstateInfo = new BehaviorSubject(await this.getPstateInfo());
-        } else {
-            this.pstateInfo.next(await this.getPstateInfo());
+            if (this.pstateInfo === undefined) {
+                this.pstateInfo = new BehaviorSubject(await this.getPstateInfo());
+            } else {
+                this.pstateInfo.next(await this.getPstateInfo());
+            }
+        } catch (err: unknown) {
+            console.error(`SysFsService: periodicUpdate error => ${err}`);
+        } finally {
+            this.isUpdating = false;
         }
     }
 

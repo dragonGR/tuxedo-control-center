@@ -1313,6 +1313,11 @@ export class WebcamSettingsComponent implements OnInit {
     public ngOnDestroy(): void {
         this.stopWebcam();
 
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+
         this.webcamService.setMediaStream(null);
 
         if (this.webcamService.getDetachedWebcamWindowActive()) {
