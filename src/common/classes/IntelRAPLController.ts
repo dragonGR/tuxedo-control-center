@@ -164,12 +164,31 @@ export class IntelRAPLController {
         const props: IntelRAPLController['properties'] = this.properties;
         const maxPower: number = this.getConstraint0MaxPower();
 
-        try {
-            const powerLimit: number =
-                setPowerLimit === undefined ? maxPower : Math.max(maxPower / 2, Math.min(setPowerLimit, maxPower));
+        if (maxPower === undefined || Number.isNaN(maxPower) || maxPower <= 0) {
+            console.error(
+                'IntelRAPLController: setPowerPL1Limit failed => constraint0MaxPower is invalid or unavailable',
+            );
+            return;
+        }
 
-            props.constraint0PowerLimit.writeValue(powerLimit);
-            props.enabled.writeValue(true);
+        const safeMinPower: number = Math.floor(maxPower / 2);
+        let targetPowerLimit: number;
+
+        if (setPowerLimit === undefined) {
+            targetPowerLimit = maxPower;
+        } else {
+            if (Number.isNaN(setPowerLimit)) {
+                console.error('IntelRAPLController: setPowerPL1Limit failed => setPowerLimit is NaN');
+                return;
+            }
+            targetPowerLimit = Math.max(safeMinPower, Math.min(setPowerLimit, maxPower));
+        }
+
+        try {
+            props.constraint0PowerLimit.writeValue(targetPowerLimit);
+            if (props.enabled.isAvailable() && props.enabled.isWritable()) {
+                props.enabled.writeValue(true);
+            }
         } catch (err: unknown) {
             console.error(`IntelRAPLController: setPowerPL1Limit failed => ${err}`);
         }
