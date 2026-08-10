@@ -103,7 +103,7 @@ export class TccDBusClientService implements OnDestroy {
 
     public isX11: BehaviorSubject<number> = new BehaviorSubject<number>(-1);
     public device: TUXEDODevice = 0;
-    public hasAquaris: boolean = true;
+    public hasAquaris: boolean = false;
 
     private dbusFunctionMap: Map<BehaviorSubject<any>, DbusFunctionEntry> = new Map<
         BehaviorSubject<any>,

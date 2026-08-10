@@ -551,7 +551,6 @@ export class TuxedoControlCenterDaemon extends SingleProcess {
         const boardVendor: string = dmi.boardVendor.readValueNT();
         const chassisVendor: string = dmi.chassisVendor.readValueNT();
         const sysVendor: string = dmi.sysVendor.readValueNT();
-        let showAquarisMenu: boolean;
 
         const isTuxedo: boolean =
             boardVendor?.toLowerCase().includes('tuxedo') ||
@@ -569,14 +568,10 @@ export class TuxedoControlCenterDaemon extends SingleProcess {
                     deviceName === 'STELLARIS16A07' ||
                     deviceName === 'STELLARIS16I07')
             ) {
-                showAquarisMenu = true;
-            } else {
-                showAquarisMenu = false;
+                return true;
             }
-        } else {
-            showAquarisMenu = true;
         }
-        return showAquarisMenu;
+        return false;
     }
 
     public identifyDevice(): TUXEDODevice {
