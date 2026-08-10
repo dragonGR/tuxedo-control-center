@@ -120,6 +120,10 @@ export const webcamHandlers: Map<string, (...args: any[]) => any> = new Map<stri
 
     .set(WebcamAPIFunctions.getSelectedWebcamSettings, (selectedWebcamPath: string): Promise<string> => {
         return new Promise<string>((resolve: (value: string) => void): void => {
+            if (selectedWebcamPath && !/^\/dev\/(video\d+|v4l\/by-(id|path)\/.+)$/.test(selectedWebcamPath)) {
+                console.error(`webcamAPI: getSelectedWebcamSettings invalid device path '${selectedWebcamPath}'`);
+                return resolve('');
+            }
             child_process.execFile(
                 'python3',
                 [getWebcamCtrlPythonPath(), '-d', selectedWebcamPath, '-j'],
@@ -135,6 +139,10 @@ export const webcamHandlers: Map<string, (...args: any[]) => any> = new Map<stri
         WebcamAPIFunctions.executeWebcamCtrls,
         (devicePath: string, parameter: string, value: string): Promise<string> => {
             return new Promise<string>((resolve: (value: string) => void): void => {
+                if (devicePath && !/^\/dev\/(video\d+|v4l\/by-(id|path)\/.+)$/.test(devicePath)) {
+                    console.error(`webcamAPI: executeWebcamCtrls invalid device path '${devicePath}'`);
+                    return resolve('');
+                }
                 child_process.execFile(
                     'python3',
                     [getWebcamCtrlPythonPath(), '-d', devicePath, '-c', `${parameter}=${value}`],
@@ -151,6 +159,10 @@ export const webcamHandlers: Map<string, (...args: any[]) => any> = new Map<stri
         WebcamAPIFunctions.executeFilteredWebcamCtrls,
         async (devicePath: string, filteredControls: string): Promise<string> => {
             return new Promise<string>((resolve: (value: string) => void): void => {
+                if (devicePath && !/^\/dev\/(video\d+|v4l\/by-(id|path)\/.+)$/.test(devicePath)) {
+                    console.error(`webcamAPI: executeFilteredWebcamCtrls invalid device path '${devicePath}'`);
+                    return resolve('');
+                }
                 child_process.execFile(
                     'python3',
                     [getWebcamCtrlPythonPath(), '-d', devicePath, '-c', filteredControls],
@@ -179,26 +191,34 @@ export const webcamHandlers: Map<string, (...args: any[]) => any> = new Map<stri
         return new Promise<boolean>((resolve: (value: boolean | PromiseLike<boolean>) => void): void => {
             const tmpDir: string = fs.mkdtempSync(path.join(os.tmpdir(), 'tcc-'));
             const tmpWebcamPath: string = path.join(tmpDir, 'tmptccwebcam');
-            webcamConfigHandler.writeWebcamSettings(webcamSettings, tmpWebcamPath);
             let tccdExec: string;
             if (environmentIsProduction) {
                 tccdExec = TccPaths.TCCD_EXEC_FILE;
             } else {
                 tccdExec = `${cwd}/dist/tuxedo-control-center/data/service/tccd`;
             }
-            child_process.exec(
-                `pkexec ${tccdExec} --new_webcam ${tmpWebcamPath}`,
-                (err: unknown, _stdout: string, _stderr: string): void => {
-                    try {
-                        fs.rmSync(tmpDir, { recursive: true, force: true });
-                    } catch (_cleanErr: unknown) {}
+            try {
+                webcamConfigHandler.writeWebcamSettings(webcamSettings, tmpWebcamPath);
+                child_process.exec(
+                    `pkexec ${tccdExec} --new_webcam ${tmpWebcamPath}`,
+                    (err: unknown, _stdout: string, _stderr: string): void => {
+                        try {
+                            fs.rmSync(tmpDir, { recursive: true, force: true });
+                        } catch (_cleanErr: unknown) {}
 
-                    if (err) {
-                        resolve(false);
-                    } else {
-                        resolve(true);
-                    }
-                },
-            );
+                        if (err) {
+                            resolve(false);
+                        } else {
+                            resolve(true);
+                        }
+                    },
+                );
+            } catch (err: unknown) {
+                console.error(`webcamAPI: writeConfig failed => ${err}`);
+                try {
+                    fs.rmSync(tmpDir, { recursive: true, force: true });
+                } catch (_cleanErr: unknown) {}
+                resolve(false);
+            }
         });
     });

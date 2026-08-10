@@ -120,27 +120,17 @@ contextBridge.exposeInMainWorld('vendor', {
 });
 
 contextBridge.exposeInMainWorld('webcam', {
-    // https://github.com/electron/electron/issues/21437
     onApplyControls: (callback: () => void): void => {
-        const channelname: string = 'apply-controls';
-        if (callbacks.indexOf(channelname) < 0) {
-            callbacks.push(channelname);
-            ipcRenderer.on(channelname, callback);
-        }
+        ipcRenderer.removeAllListeners('apply-controls');
+        ipcRenderer.on('apply-controls', callback);
     },
     onExternalWebcamPreviewClosed: (callback: () => void): void => {
-        const channelname: string = 'external-webcam-preview-closed';
-        if (callbacks.indexOf(channelname) < 0) {
-            callbacks.push(channelname);
-            ipcRenderer.on(channelname, callback);
-        }
+        ipcRenderer.removeAllListeners('external-webcam-preview-closed');
+        ipcRenderer.on('external-webcam-preview-closed', callback);
     },
     onVideoEnded: (callback: () => void): void => {
-        const channelname: string = 'video-ended';
-        if (callbacks.indexOf(channelname) < 0) {
-            callbacks.push(channelname);
-            ipcRenderer.on(channelname, callback);
-        }
+        ipcRenderer.removeAllListeners('video-ended');
+        ipcRenderer.on('video-ended', callback);
     },
     onSettingWebcamWithLoading: (callback: (event: IpcRendererEvent, config: WebcamConstraints) => void): void => {
         const channelname: string = 'setting-webcam-with-loading';
