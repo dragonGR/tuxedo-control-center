@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.8-dragonGR] - 2026-08-10
+### Security & Custom Fixes
+- Hardened IPC handlers and process argument vectors across DBus, sysfs, tomte, webcam, and systeminfo APIs
+- Custom build tag (-dragonGR)
+
 ## [3.0.8] - 2026-07-28
 ### Added
 - Environmental variable to systeminfos when executed through TCC
