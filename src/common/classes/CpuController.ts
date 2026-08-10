@@ -95,19 +95,39 @@ export class CpuController {
      * @param numberOfCores Number of logical cpu cores to use, defaults to "use all available"
      */
     public useCores(numberOfCores?: number): void {
-        if (numberOfCores === undefined) {
-            numberOfCores = this.cores?.length;
-        }
-        if (numberOfCores === 0) {
+        const targetCount: number = numberOfCores === undefined ? this.cores?.length : numberOfCores;
+        if (!this.cores || this.cores.length === 0 || targetCount === 0) {
             return;
         }
-        for (let i: number = 1; i < this.cores?.length; ++i) {
-            if (!this.cores[i].online.isAvailable()) {
-                continue;
+
+        const modifiedCoresState: Array<{ core: LogicalCpuController; previousState: boolean }> = [];
+
+        try {
+            for (let i: number = 1; i < this.cores.length; ++i) {
+                const core: LogicalCpuController = this.cores[i];
+                if (!core.online.isAvailable() || !core.online.isWritable()) {
+                    continue;
+                }
+
+                const currentState: boolean = core.online.readValueNT();
+                const targetState: boolean = i < targetCount;
+
+                if (currentState !== undefined && currentState !== targetState) {
+                    modifiedCoresState.push({ core, previousState: currentState });
+                    core.online.writeValue(targetState);
+                }
             }
-            const targetState: boolean = i < numberOfCores;
-            if (this.cores[i].online.readValue() !== targetState) {
-                this.cores[i].online.writeValue(targetState);
+        } catch (err: unknown) {
+            console.error(`CpuController: useCores failed mid-operation => ${err}. Rolling back core states...`);
+
+            for (const record of modifiedCoresState.reverse()) {
+                try {
+                    record.core.online.writeValue(record.previousState);
+                } catch (rollbackErr: unknown) {
+                    console.error(
+                        `CpuController: Rollback failed for core ${record.core.coreIndex} => ${rollbackErr}`,
+                    );
+                }
             }
         }
     }
