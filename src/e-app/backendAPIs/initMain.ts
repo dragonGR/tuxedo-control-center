@@ -396,7 +396,37 @@ export async function updateTrayProfiles(): Promise<void> {
 }
 
 export async function hasAquaris(): Promise<boolean> {
-    return await tccDBus.deviceHasAquaris();
+    const dbusHasAquaris: boolean = await tccDBus.deviceHasAquaris();
+    if (!dbusHasAquaris) {
+        return false;
+    }
+    try {
+        const readDmi = (file: string): string => {
+            const fullPath = path.join('/sys/class/dmi/id', file);
+            return fs.existsSync(fullPath) ? fs.readFileSync(fullPath, 'utf8').trim() : '';
+        };
+        const boardVendor = readDmi('board_vendor').toLowerCase();
+        const sysVendor = readDmi('sys_vendor').toLowerCase();
+        const chassisVendor = readDmi('chassis_vendor').toLowerCase();
+        const isTuxedo =
+            boardVendor.includes('tuxedo') || sysVendor.includes('tuxedo') || chassisVendor.includes('tuxedo');
+        if (!isTuxedo) {
+            return false;
+        }
+        const productSKU = readDmi('product_sku');
+        const supportedAquarisSKUs = [
+            'STELLARIS1XI04',
+            'STEPOL1XA04',
+            'STELLARIS1XI05',
+            'STELLARIS16I06',
+            'STELLARIS17I06',
+            'STELLARIS16A07',
+            'STELLARIS16I07',
+        ];
+        return supportedAquarisSKUs.includes(productSKU);
+    } catch (_err: unknown) {
+        return dbusHasAquaris;
+    }
 }
 
 export async function getIsUnsupportedConfigurableTGPDevice(): Promise<boolean> {
