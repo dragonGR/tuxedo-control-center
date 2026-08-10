@@ -31,6 +31,7 @@ export const dbusHandlers: Map<string, (...args: any[]) => any> = new Map<string
                     resolve(tccDBus.tccdVersion());
                 } catch (err: unknown) {
                     console.error(`dbusAPI: getVersion failed => ${err}`);
+                    resolve('');
                 }
             },
         );
@@ -43,6 +44,7 @@ export const dbusHandlers: Map<string, (...args: any[]) => any> = new Map<string
                     resolve(tccDBus.tuxedoWmiAvailable());
                 } catch (err: unknown) {
                     console.error(`dbusAPI: tuxedoWmiAvailable failed => ${err}`);
+                    resolve(false);
                 }
             },
         );
@@ -55,6 +57,7 @@ export const dbusHandlers: Map<string, (...args: any[]) => any> = new Map<string
                     resolve(tccDBus.getFanDataJSON());
                 } catch (err: unknown) {
                     console.error(`dbusAPI: getFanData failed => ${err}`);
+                    resolve(undefined);
                 }
             },
         );
@@ -67,6 +70,7 @@ export const dbusHandlers: Map<string, (...args: any[]) => any> = new Map<string
                     resolve(tccDBus.webcamSWAvailable());
                 } catch (err: unknown) {
                     console.error(`dbusAPI: webcamSWAvailable failed => ${err}`);
+                    resolve(false);
                 }
             },
         );
@@ -79,6 +83,7 @@ export const dbusHandlers: Map<string, (...args: any[]) => any> = new Map<string
                     resolve(tccDBus.getForceYUV420OutputSwitchAvailable());
                 } catch (err: unknown) {
                     console.error(`dbusAPI: getForceYUV420OutputSwitchAvailable failed => ${err}`);
+                    resolve(false);
                 }
             },
         );
@@ -91,6 +96,7 @@ export const dbusHandlers: Map<string, (...args: any[]) => any> = new Map<string
                     resolve(tccDBus.consumeModeReapplyPending());
                 } catch (err: unknown) {
                     console.error(`dbusAPI: consumeModeReapplyPending failed => ${err}`);
+                    resolve(false);
                 }
             },
         );
@@ -103,6 +109,7 @@ export const dbusHandlers: Map<string, (...args: any[]) => any> = new Map<string
                     resolve(tccDBus.getActiveProfileJSON());
                 } catch (err: unknown) {
                     console.error(`dbusAPI: getActiveProfileJSON failed => ${err}`);
+                    resolve(undefined);
                 }
             },
         );

@@ -329,12 +329,15 @@ export class TccDBusClientService implements OnDestroy {
 
     private async dbusUpdate(): Promise<void> {
         const dbusAvailable: boolean = await window.dbusAPI.dbusAvailable();
+        const wasAvailable: boolean = this.isDbusAvailable;
 
         this.dbusAvailable.next(dbusAvailable);
         this.isDbusAvailable = dbusAvailable;
 
         if (!dbusAvailable) {
-            console.error('tcc-dbus-client: dbusUpdate: dbus not available');
+            if (wasAvailable) {
+                console.error('tcc-dbus-client: dbusUpdate: dbus not available');
+            }
             return;
         }
 
