@@ -35,8 +35,7 @@ export class SysFsPropertyStringList extends SysFsPropertyIO<string[]> {
             return [];
         } else {
             const trimmedList: string[] = value.split(' ').map((element: string): string => element.trim());
-            // todo: change varaible name "e" to something more descriptive
-            return trimmedList.filter((e: string): boolean => e !== '');
+            return trimmedList.filter((entry: string): boolean => entry !== '');
         }
     }
 
