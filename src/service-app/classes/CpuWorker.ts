@@ -58,20 +58,31 @@ export class CpuWorker extends DaemonWorker {
         this.hasEPPPerformanceQuirk = eppPerformanceQuirkDevices.includes(this.device);
     }
 
+    private isVerified: boolean = false;
+
     public async onStart(): Promise<void> {
+        this.isVerified = false;
         if (this.tccd.settings.cpuSettingsEnabled) {
             this.applyCpuProfile(this.activeProfile);
         }
     }
 
     public async onWork(): Promise<void> {
-        // Check if current profile CPU values are actually set. If not
-        // apply profile again
-
+        // Check if current profile CPU values are actually set. If not, apply profile again.
+        // If settings are verified and sensor collection is disabled (GUI closed), skip sysfs reads.
         try {
-            if (this.tccd.settings.cpuSettingsEnabled && !this.validateCpuFreq()) {
-                this.tccd.logLine('CpuWorker: Incorrect settings, reapplying profile');
-                this.applyCpuProfile(this.activeProfile);
+            const sensorCollection: boolean = this.tccd.dbusData.sensorDataCollectionStatus;
+            if (this.isVerified && !sensorCollection) {
+                return;
+            }
+
+            if (this.tccd.settings.cpuSettingsEnabled) {
+                const isValid: boolean = this.validateCpuFreq();
+                this.isVerified = isValid;
+                if (!isValid) {
+                    this.tccd.logLine('CpuWorker: Incorrect settings, reapplying profile');
+                    this.applyCpuProfile(this.activeProfile);
+                }
             }
         } catch (err: unknown) {
             console.error(`CpuWorker: onWork failed => ${err}`);
@@ -168,6 +179,7 @@ export class CpuWorker extends DaemonWorker {
      */
     private applyCpuProfile(profile: ITccProfile): void {
         try {
+            this.isVerified = false;
             // Reset everything to default on all cores before applying settings
             // Set online status last so that all cores get the same settings
             this.setCpuDefaultConfig();

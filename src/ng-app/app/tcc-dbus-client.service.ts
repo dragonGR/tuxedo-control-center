@@ -291,6 +291,8 @@ export class TccDBusClientService implements OnDestroy {
         }
     }
 
+    private previousRawDataMap: Map<BehaviorSubject<any>, any> = new Map();
+
     private async updateBehaviorSubject(
         behaviorSubject: BehaviorSubject<any>,
         dbusFunctionName: string,
@@ -300,10 +302,19 @@ export class TccDBusClientService implements OnDestroy {
             const data: string | string[] | boolean | number = await dbusFunction();
 
             if (data === undefined || data === '') {
-                console.log(`tcc-dbus-client: ${dbusFunctionName} did not return data and returned "${data}" instead`);
-                behaviorSubject.next(undefined);
+                if (this.previousRawDataMap.get(behaviorSubject) !== undefined) {
+                    console.log(`tcc-dbus-client: ${dbusFunctionName} did not return data and returned "${data}" instead`);
+                    this.previousRawDataMap.set(behaviorSubject, undefined);
+                    behaviorSubject.next(undefined);
+                }
                 return;
             }
+
+            const prevData: any = this.previousRawDataMap.get(behaviorSubject);
+            if (prevData === data) {
+                return;
+            }
+            this.previousRawDataMap.set(behaviorSubject, data);
 
             if (typeof data === 'string') {
                 behaviorSubject.next(JSON.parse(data));

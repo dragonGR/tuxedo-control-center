@@ -34,46 +34,68 @@ interface ValueBufferI {
 }
 
 export class ValueBuffer implements ValueBufferI {
-    private bufferData: Array<number>;
-    private bufferMaxSize: number = 13;
-
-    constructor() {
-        this.bufferData = [];
-    }
+    private bufferData: number[] = [];
+    private writeIndex: number = 0;
+    private readonly bufferMaxSize: number = 13;
+    private scratchBuffer: number[] = new Array(13);
 
     public addValue(value: number): void {
-        this.bufferData.push(value);
-        while (this.bufferData.length > this.bufferMaxSize) {
-            this.bufferData.shift();
+        if (this.bufferData.length < this.bufferMaxSize) {
+            this.bufferData.push(value);
+        } else {
+            this.bufferData[this.writeIndex] = value;
+            this.writeIndex = (this.writeIndex + 1) % this.bufferMaxSize;
         }
     }
 
-    private getMiddle(numbers: number[]): number[] {
-        const size = 7;
-        const middleIndex: number = Math.round(numbers.length / 2);
+    public getFilteredValue(): number {
+        const len: number = this.bufferData.length;
+        if (len === 0) {
+            return 0;
+        }
 
+        for (let i = 0; i < len; i++) {
+            this.scratchBuffer[i] = this.bufferData[i];
+        }
+
+        // Inline insertion sort for small array (max 13 elements) - zero garbage collection allocations
+        for (let i = 1; i < len; i++) {
+            const key: number = this.scratchBuffer[i];
+            let j: number = i - 1;
+            while (j >= 0 && this.scratchBuffer[j] > key) {
+                this.scratchBuffer[j + 1] = this.scratchBuffer[j];
+                j--;
+            }
+            this.scratchBuffer[j + 1] = key;
+        }
+
+        // Extract middle 7 elements (or available middle sub-range)
+        const size = 7;
+        const middleIndex: number = Math.round(len / 2);
         const halfSize: number = Math.round(size / 2);
         const startRange: number = Math.max(0, middleIndex - halfSize);
+        const halfSizeOffset: number = len % 2 ? Math.floor(size / 2) : Math.ceil(size / 2);
+        const endRange: number = Math.min(len, middleIndex + halfSizeOffset);
 
-        const halfSizeOffset: number = numbers.length % 2 ? Math.floor(size / 2) : Math.ceil(size / 2);
-        const endRange: number = Math.min(numbers.length, middleIndex + halfSizeOffset);
+        let sum = 0;
+        let count = 0;
+        for (let i = startRange; i < endRange; i++) {
+            sum += this.scratchBuffer[i];
+            count++;
+        }
 
-        return numbers.slice(startRange, endRange);
-    }
-
-    private calculateAverage(numbers: number[]): number {
-        return numbers.reduce((acc: number, current: number): number => acc + current, 0) / numbers.length;
-    }
-
-    public getFilteredValue(): number {
-        const sortedArray: number[] = [...this.bufferData].sort((n1: number, n2: number): number => n1 - n2);
-        const middleNumbers: number[] = this.getMiddle(sortedArray);
-        const averageTemp: number = this.calculateAverage(middleNumbers);
-        return Math.round(averageTemp);
+        return count > 0 ? Math.round(sum / count) : 0;
     }
 
     public getBufferCopy(): Array<number> {
-        return Array.from(this.bufferData);
+        if (this.bufferData.length < this.bufferMaxSize) {
+            return Array.from(this.bufferData);
+        }
+        const result: number[] = new Array(this.bufferMaxSize);
+        for (let i = 0; i < this.bufferMaxSize; i++) {
+            result[i] = this.bufferData[(this.writeIndex + i) % this.bufferMaxSize];
+        }
+        return result;
     }
 }
 
@@ -291,20 +313,23 @@ export class FanControlLogic {
             return -1;
         }
 
-        if (temperatureValue > this.tableMaxEntry.temp) {
-            return this.fanProfile[this.useTable].length - 1;
-        } else if (temperatureValue < this.tableMinEntry.temp) {
+        const table: ITccFanTableEntry[] = this.fanProfile?.[this.useTable];
+        if (!table || table.length === 0) {
+            return -1;
+        }
+
+        if (temperatureValue >= this.tableMaxEntry.temp) {
+            return table.length - 1;
+        } else if (temperatureValue <= this.tableMinEntry.temp) {
             return 0;
         }
 
-        const foundIndex: number = this.fanProfile[this.useTable].findIndex(
-            (entry: { temp: number }): boolean => entry.temp === temperatureValue,
-        );
-        if (foundIndex !== -1) {
-            return foundIndex;
-        } else {
-            return this.findFittingEntryIndex(temperatureValue + 1);
+        for (let i = table.length - 1; i >= 0; i--) {
+            if (table[i].temp <= temperatureValue) {
+                return i;
+            }
         }
+        return 0;
     }
 
     public getFilteredTemp(): number {
