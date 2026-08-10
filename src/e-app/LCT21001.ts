@@ -199,7 +199,7 @@ export class LCT21001 {
             try {
                 blDevice = await this.adapter.getDevice(deviceId);
             } catch (_err: unknown) {
-                await blDevice.cleanup();
+                await blDevice?.cleanup();
                 continue;
             }
             const info = new DeviceInfo();
@@ -208,7 +208,7 @@ export class LCT21001 {
             try {
                 info.rssi = Number.parseInt(await blDevice.getRSSI(), 10);
             } catch (_err: unknown) {
-                await blDevice.cleanup();
+                await blDevice?.cleanup();
                 continue;
             }
 

@@ -79,15 +79,16 @@ export function findClosestValue(value: number, array: number[]): number {
 // if errors appear after file was indeed ok but afterwards isn't, it needs error handling instead of checking status every time
 export function fileOK(path: string): boolean {
     try {
-        const exists: boolean = fs.existsSync(path);
-
-        if (exists) {
-            fs.accessSync(path, fs.constants.F_OK | fs.constants.R_OK | fs.constants.W_OK);
-            return true;
+        if (fs.existsSync(path)) {
+            try {
+                fs.accessSync(path, fs.constants.F_OK | fs.constants.R_OK | fs.constants.W_OK);
+                return true;
+            } catch (_err: unknown) {
+                return false;
+            }
         }
         return false;
-    } catch (err: unknown) {
-        console.error(`Utils: fileOK failed => ${err}`);
+    } catch (_err: unknown) {
         return false;
     }
 }

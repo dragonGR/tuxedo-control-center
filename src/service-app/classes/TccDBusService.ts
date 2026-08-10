@@ -53,7 +53,7 @@ export class TccDBusService extends DaemonWorker {
     }
 
     public async onStart(): Promise<void> {
-        if (!this.started) {
+        if (!this.started && this.bus) {
             this.bus
                 .requestName('com.tuxedocomputers.tccd', 0)
                 .then((_name: number): void => {
@@ -83,7 +83,7 @@ export class TccDBusService extends DaemonWorker {
         this.dbusData.dbusAvailable = false;
 
         try {
-            this.bus.unexport(this.path, this.interface);
+            this.bus?.unexport(this.path, this.interface);
         } catch (err: unknown) {
             console.error(`TccDBusService: onExit failed => ${err}`);
         }

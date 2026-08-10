@@ -340,7 +340,7 @@ export class KeyboardBacklightListener {
         updateSettings: boolean = true,
         updateTCC: boolean = true,
     ): Promise<void> {
-        if (updateSysFS) {
+        if (updateSysFS && this.sysDBusUPowerKbdBacklightInterface) {
             try {
                 await this.sysDBusUPowerKbdBacklightInterface.SetBrightness(keyboardBacklightStatesNew[0].brightness);
             } catch (err: unknown) {
