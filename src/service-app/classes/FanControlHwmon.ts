@@ -295,7 +295,7 @@ export class FanControlHwmon extends FanControlBaseClass {
 
         if (tempEntry !== undefined) {
             const readValue: number = await tempEntry.readValueNTA();
-            if (readValue) {
+            if (readValue !== undefined && readValue !== null) {
                 const tempCelsius: number = readValue / 1000;
                 this.sensorValueMap.set(tempLabel, tempCelsius);
                 this.tempCache.set(tempLabel, tempCelsius);
