@@ -138,11 +138,10 @@ export abstract class SysFsPropertyIO<T> implements ISysFsProperty {
     public isAvailable(): boolean {
         try {
             if (fs.existsSync(this.readPath) && fs.existsSync(this.writePath)) {
-                fs.readFileSync(this.readPath);
+                fs.accessSync(this.readPath, fs.constants.R_OK);
                 return true;
-            } else {
-                return false;
             }
+            return false;
         } catch (_err: unknown) {
             return false;
         }
