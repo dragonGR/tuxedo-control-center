@@ -39,27 +39,21 @@ export class CpuPowerWorker extends DaemonWorker {
 
     public async onStart(): Promise<void> {
         this.powerWorker = new PowerController(this.intelRAPL);
+        this.updateRAPLConstraintStatuses();
+        await this.onWork();
+    }
 
-        this.RAPLConstraint0Status = this.intelRAPL.getIntelRAPLConstraint0Available()
-            ? this.intelRAPL.getIntelRAPLConstraint0Available()
-            : false;
-
-        this.RAPLConstraint1Status = this.intelRAPL.getIntelRAPLConstraint1Available()
-            ? this.intelRAPL.getIntelRAPLConstraint1Available()
-            : false;
-
-        this.RAPLConstraint2Status = this.intelRAPL.getIntelRAPLConstraint2Available()
-            ? this.intelRAPL.getIntelRAPLConstraint2Available()
-            : false;
-
-        this.onWork();
+    private updateRAPLConstraintStatuses(): void {
+        this.RAPLConstraint0Status = this.intelRAPL.getIntelRAPLConstraint0Available();
+        this.RAPLConstraint1Status = this.intelRAPL.getIntelRAPLConstraint1Available();
+        this.RAPLConstraint2Status = this.intelRAPL.getIntelRAPLConstraint2Available();
     }
 
     public async onWork(): Promise<void> {
         if (this.tccd.dbusData.sensorDataCollectionStatus) {
             const cpuPowerValues: ICpuPower = {
                 powerDraw: this.getCurrentPower(),
-                maxPowerLimit: this.getMaxPowerLimix(),
+                maxPowerLimit: this.getMaxPowerLimit(),
             };
 
             this.tccd.dbusData.cpuPowerValuesJSON = JSON.stringify(cpuPowerValues);
@@ -74,7 +68,10 @@ export class CpuPowerWorker extends DaemonWorker {
         return this.powerWorker.getCurrentPower();
     }
 
-    private getMaxPowerLimix(): number {
+    private getMaxPowerLimit(): number {
+        // Periodically refresh constraint availability in case kernel powercap modules reloaded or power state changed
+        this.updateRAPLConstraintStatuses();
+
         if (!this.RAPLConstraint0Status && !this.RAPLConstraint1Status && !this.RAPLConstraint2Status) {
             return -1;
         }
@@ -101,7 +98,8 @@ export class CpuPowerWorker extends DaemonWorker {
                 maxPowerLimit = constraint2MaxPower;
             }
         }
-        return maxPowerLimit / 1000000;
+
+        return maxPowerLimit > 0 ? maxPowerLimit / 1000000 : -1;
     }
 
     public async onExit(): Promise<void> {}
