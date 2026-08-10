@@ -50,11 +50,12 @@ export class WebcamSettingsGuard implements CanDeactivate<CanComponentDeactivate
     }
 
     public async canDeactivate(component: CanComponentDeactivate): Promise<boolean> {
-        if (component.webcamFormGroup.dirty) {
-            let canRoute: boolean;
-            await this.askUnsavedPreset().then((x: ConfirmDialogResult): void => {
-                canRoute = x['confirm'];
-            });
+        if (component.webcamFormGroup?.dirty) {
+            let canRoute: boolean = false;
+            const x: ConfirmDialogResult = await this.askUnsavedPreset();
+            if (x) {
+                canRoute = x.confirm;
+            }
             return canRoute;
         }
 

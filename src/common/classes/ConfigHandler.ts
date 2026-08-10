@@ -106,9 +106,9 @@ export class ConfigHandler {
         });
     }
 
-    public writeWebcamSettings(settings: WebcamPreset[], filePath: string = this.pathSettings): void {
+    public writeWebcamSettings(settings: WebcamPreset[], filePath: string = this.pathWebcam): void {
         this.writeConfig<WebcamPreset[]>(settings, filePath, {
-            mode: this.settingsFileMod,
+            mode: this.webcamFileMod,
         });
     }
 
