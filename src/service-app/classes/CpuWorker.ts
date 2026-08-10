@@ -272,8 +272,8 @@ export class CpuWorker extends DaemonWorker {
             // ie scaling_max_freq readout does not stay at cpuinfo_max_freq
             if (
                 profile.cpu.noTurbo !== true &&
-                this.cpuCtrl.cores[0].scalingDriver.isAvailable() &&
-                this.cpuCtrl.cores[0].scalingDriver.readValueNT() !== 'intel_pstate'
+                this.cpuCtrl.cores[0]?.scalingDriver?.isAvailable() &&
+                this.cpuCtrl.cores[0]?.scalingDriver?.readValueNT() !== 'intel_pstate'
             ) {
                 scalingDriver = core.scalingDriver.readValueNT();
                 let coreAvailableFrequencies: number[];

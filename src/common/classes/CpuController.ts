@@ -62,7 +62,6 @@ export class CpuController {
 
     public getAvailableLogicalCores(basePath: string): void {
         // Add "possible" and "present" logical cores
-        this.cores = [];
         try {
             const possibleCores: number[] = this.possible.readValue();
             const presentCores: number[] = this.present.readValue();
@@ -73,12 +72,18 @@ export class CpuController {
                 }
             }
             coreIndexToAdd.sort((a: number, b: number): number => a - b);
+            const existingMap: Map<number, LogicalCpuController> = new Map(
+                this.cores.map((c: LogicalCpuController): [number, LogicalCpuController] => [c.coreIndex, c]),
+            );
+            const newCores: LogicalCpuController[] = [];
             for (const coreIndex of coreIndexToAdd) {
-                const newCore = new LogicalCpuController(basePath, coreIndex);
+                const existing: LogicalCpuController = existingMap.get(coreIndex);
+                const newCore: LogicalCpuController = existing || new LogicalCpuController(basePath, coreIndex);
                 if (coreIndex === 0 || newCore.online.isAvailable()) {
-                    this.cores.push(newCore);
+                    newCores.push(newCore);
                 }
             }
+            this.cores = newCores;
         } catch (err: unknown) {
             console.error(`CpuController: getAvailableLogicalCores failed => ${err}`);
         }
@@ -138,7 +143,7 @@ export class CpuController {
             if (scalingFrequencyAvailable) {
                 availableFrequencies = core.scalingAvailableFrequencies.readValueNT();
             }
-            const scalingDriverAvailable: boolean = this.cores[0].scalingAvailableFrequencies.isAvailable();
+            const scalingDriverAvailable: boolean = core.scalingDriver.isAvailable();
             if (scalingDriverAvailable) {
                 scalingDriver = core.scalingDriver.readValueNT();
             }
