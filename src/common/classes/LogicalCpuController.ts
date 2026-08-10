@@ -109,11 +109,11 @@ export class LogicalCpuController extends SysFsController {
 
     public getReducedAvailableFreq(): number {
         let averageFreq: number;
-        const coreMaxFrequency: number = this.cpuinfoMaxFreq.readValue();
         const availableFrequencies: number[] = this.scalingAvailableFrequencies.readValueNT();
+        const coreMaxFrequency: number = this.cpuinfoMaxFreq.readValueNT() ?? 0;
 
-        if (availableFrequencies !== undefined && availableFrequencies?.length !== 0) {
-            averageFreq = availableFrequencies[Math.floor(availableFrequencies?.length / 2.0)];
+        if (availableFrequencies !== undefined && availableFrequencies.length > 0) {
+            averageFreq = availableFrequencies[Math.floor(availableFrequencies.length / 2.0)];
         } else {
             averageFreq = Math.round(coreMaxFrequency / 2);
         }
@@ -121,7 +121,7 @@ export class LogicalCpuController extends SysFsController {
         return averageFreq;
     }
 
-    public getReducedAvailableFreqNT(): number {
+    public getReducedAvailableFreqNT(): number | undefined {
         try {
             return this.getReducedAvailableFreq();
         } catch (err: unknown) {
