@@ -41,6 +41,28 @@ export class KeyboardBacklightListener {
     protected sysDBusUPowerProps: dbus.ClientInterface = {} as dbus.ClientInterface;
     protected sysDBusUPowerKbdBacklightInterface: dbus.ClientInterface = {} as dbus.ClientInterface;
     protected onStartRetryCount: number = 5;
+    private isLidClosed: boolean = false;
+    private writeSettingsTimeout: NodeJS.Timeout = undefined;
+
+    private debouncedWriteSettings(): void {
+        if (this.writeSettingsTimeout) {
+            clearTimeout(this.writeSettingsTimeout);
+        }
+        this.writeSettingsTimeout = setTimeout(() => {
+            this.tccd.config.writeSettingsAsync(this.tccd.settings);
+        }, 500);
+    }
+
+    private async updateLidState(): Promise<void> {
+        try {
+            if (this.sysDBusUPowerProps?.Get) {
+                const res = await this.sysDBusUPowerProps.Get('org.freedesktop.UPower', 'LidIsClosed');
+                this.isLidClosed = !!res?.value;
+            }
+        } catch (_err) {
+            this.isLidClosed = false;
+        }
+    }
 
     constructor(private tccd: TuxedoControlCenterDaemon) {
         this.init();
@@ -103,6 +125,15 @@ export class KeyboardBacklightListener {
         );
 
         this.sysDBusUPowerProps = sysDBusUPowerObject.getInterface('org.freedesktop.DBus.Properties');
+        this.sysDBusUPowerProps.on(
+            'PropertiesChanged',
+            (interfaceName: string, changedProps: Record<string, any>): void => {
+                if (interfaceName === 'org.freedesktop.UPower' && changedProps?.LidIsClosed !== undefined) {
+                    this.isLidClosed = !!changedProps.LidIsClosed.value;
+                }
+            },
+        );
+        await this.updateLidState();
         let sysDBusUPowerKbdBacklightObject: dbus.ProxyObject = undefined;
 
         // Tuxedo OS
@@ -146,7 +177,7 @@ export class KeyboardBacklightListener {
         this.sysDBusUPowerKbdBacklightInterface.on(
             'BrightnessChanged',
             async function (brightness: number): Promise<void> {
-                if (!(await this.sysDBusUPowerProps.Get('org.freedesktop.UPower', 'LidIsClosed')).value) {
+                if (!this.isLidClosed) {
                     const keyboardBacklightStatesNew: Array<KeyboardBacklightStateInterface> =
                         this.tccd.settings.keyboardBacklightStates;
                     if (keyboardBacklightStatesNew) {
@@ -171,10 +202,7 @@ export class KeyboardBacklightListener {
                             fs.watch(
                                 `${this.ledsRGBZones[i]}/multi_intensity`,
                                 async function (): Promise<void> {
-                                    if (
-                                        !(await this.sysDBusUPowerProps.Get('org.freedesktop.UPower', 'LidIsClosed'))
-                                            .value
-                                    ) {
+                                    if (!this.isLidClosed) {
                                         const keyboardBacklightStatesNew: Array<KeyboardBacklightStateInterface> =
                                             this.tccd.settings.keyboardBacklightStates;
                                         const colors: number[] = (
@@ -379,7 +407,7 @@ export class KeyboardBacklightListener {
 
         if (updateSettings) {
             this.tccd.settings.keyboardBacklightStates = keyboardBacklightStatesNew;
-            await this.tccd.config.writeSettingsAsync(this.tccd.settings);
+            this.debouncedWriteSettings();
         }
 
         if (updateTCC) {

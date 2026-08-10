@@ -261,6 +261,7 @@ export class KeyboardBacklightComponent implements OnInit {
     }
 
     public startPress(slider: MatSliderThumb, offset: number, min: number, max: number): void {
+        this.stopPress();
         this.pressTimer = setTimeout((): void => {
             this.pressInterval = interval(200).subscribe((): void => {
                 this.modifySliderInput(slider, offset, min, max);
@@ -270,9 +271,13 @@ export class KeyboardBacklightComponent implements OnInit {
     }
 
     public stopPress(): void {
-        clearTimeout(this.pressTimer);
+        if (this.pressTimer) {
+            clearTimeout(this.pressTimer);
+            this.pressTimer = undefined;
+        }
         if (this.pressInterval) {
             this.pressInterval.unsubscribe();
+            this.pressInterval = undefined;
         }
     }
 
@@ -292,6 +297,18 @@ export class KeyboardBacklightComponent implements OnInit {
     }
 
     public ngOnDestroy(): void {
+        this.stopPress();
+
+        if (this.colorPickerTimeout) {
+            clearTimeout(this.colorPickerTimeout);
+            this.colorPickerTimeout = undefined;
+        }
+
+        if (this.brightnessSliderTimeout !== null) {
+            clearTimeout(this.brightnessSliderTimeout);
+            this.brightnessSliderTimeout = null;
+        }
+
         if (!this.keyboardBacklightCapabilitiesSubscription.closed) {
             this.keyboardBacklightCapabilitiesSubscription.unsubscribe();
         }
