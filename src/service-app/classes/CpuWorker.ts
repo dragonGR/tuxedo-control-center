@@ -259,11 +259,14 @@ export class CpuWorker extends DaemonWorker {
             }
         }
 
-        let scalingDriver: string;
-
         // Check settings for each core
+        const primaryScalingDriver: string | undefined =
+            this.cpuCtrl.cores[0]?.scalingDriver?.isAvailable()
+                ? this.cpuCtrl.cores[0].scalingDriver.readValueNT()
+                : undefined;
+
         for (const core of this.cpuCtrl.cores) {
-            if (core.coreIndex !== 0 && !core.online.readValue()) {
+            if (core.coreIndex !== 0 && !core.online.readValueNT()) {
                 // Skip offline cores
                 continue;
             }
@@ -272,29 +275,29 @@ export class CpuWorker extends DaemonWorker {
             // ie scaling_max_freq readout does not stay at cpuinfo_max_freq
             if (
                 profile.cpu.noTurbo !== true &&
-                this.cpuCtrl.cores[0]?.scalingDriver?.isAvailable() &&
-                this.cpuCtrl.cores[0]?.scalingDriver?.readValueNT() !== 'intel_pstate'
+                primaryScalingDriver !== 'intel_pstate'
             ) {
-                scalingDriver = core.scalingDriver.readValueNT();
+                const coreScalingDriver: string = core.scalingDriver.readValueNT() ?? primaryScalingDriver;
                 let coreAvailableFrequencies: number[];
 
                 if (core.scalingAvailableFrequencies.isAvailable()) {
                     coreAvailableFrequencies = core.scalingAvailableFrequencies.readValueNT();
                 }
-                const coreMinFreq: number = core.cpuinfoMinFreq.readValue();
+                const coreMinFreq: number = core.cpuinfoMinFreq.readValueNT();
                 const coreMaxFreq: number =
-                    coreAvailableFrequencies !== undefined
+                    coreAvailableFrequencies !== undefined && coreAvailableFrequencies.length > 0
                         ? coreAvailableFrequencies[0]
-                        : core.cpuinfoMaxFreq.readValue();
-                if (core.scalingMinFreq.isAvailable() && core.cpuinfoMinFreq.isAvailable()) {
-                    const minFreq: number = core.scalingMinFreq.readValue();
+                        : core.cpuinfoMaxFreq.readValueNT();
+
+                if (coreMinFreq !== undefined && core.scalingMinFreq.isAvailable()) {
+                    const minFreq: number = core.scalingMinFreq.readValueNT();
                     let minFreqProfile: number = profile.cpu.scalingMinFrequency;
                     if (minFreqProfile === undefined || minFreqProfile < coreMinFreq) {
                         minFreqProfile = coreMinFreq;
                     } else if (minFreqProfile > coreMaxFreq || profile.cpu.useMaxPerfGov) {
                         minFreqProfile = coreMaxFreq;
                     }
-                    if (minFreq !== minFreqProfile) {
+                    if (minFreq !== undefined && minFreq !== minFreqProfile) {
                         cpuFreqValidConfig = false;
                         console.error(
                             `CpuWorker: Unexpected value core ${core.coreIndex} minimum scaling frequency ${minFreq} instead of ${minFreqProfile}`,
@@ -302,11 +305,11 @@ export class CpuWorker extends DaemonWorker {
                     }
                 }
 
-                if (core.scalingMaxFreq.isAvailable() && core.cpuinfoMaxFreq.isAvailable()) {
-                    const maxFreq: number = core.scalingMaxFreq.readValue();
+                if (coreMaxFreq !== undefined && core.scalingMaxFreq.isAvailable()) {
+                    const maxFreq: number = core.scalingMaxFreq.readValueNT();
                     let maxFreqProfile: number = profile.cpu.scalingMaxFrequency;
                     if (maxFreqProfile === FrequencyConfig.ReducedFrequency) {
-                        if (this.cpuCtrl.boost.isAvailable() && scalingDriver === ScalingDriver.acpi_cpufreq) {
+                        if (this.cpuCtrl.boost.isAvailable() && coreScalingDriver === ScalingDriver.acpi_cpufreq) {
                             maxFreqProfile = coreMaxFreq;
                         } else {
                             maxFreqProfile = core.getReducedAvailableFreq();
@@ -320,7 +323,7 @@ export class CpuWorker extends DaemonWorker {
                     } else if (maxFreqProfile < coreMinFreq) {
                         maxFreqProfile = coreMinFreq;
                     }
-                    if (maxFreq !== maxFreqProfile) {
+                    if (maxFreq !== undefined && maxFreq !== maxFreqProfile) {
                         cpuFreqValidConfig = false;
                         this.tccd.logLine(
                             `CpuWorker: Unexpected value core${core.coreIndex} maximum scaling frequency => ${maxFreq} instead of ${maxFreqProfile}`,
@@ -330,7 +333,7 @@ export class CpuWorker extends DaemonWorker {
             }
 
             if (core.scalingGovernor.isAvailable() && core.scalingAvailableGovernors.isAvailable()) {
-                const currentGovernor: string = core.scalingGovernor.readValue();
+                const currentGovernor: string = core.scalingGovernor.readValueNT();
                 const governorProfile: string = profile.cpu.governor;
                 // Skip check if not set in profile
                 if (governorProfile !== undefined) {
@@ -351,7 +354,7 @@ export class CpuWorker extends DaemonWorker {
                     continue;
                 }
 
-                const currentPerformancePreference: string = core.energyPerformancePreference.readValue();
+                const currentPerformancePreference: string = core.energyPerformancePreference.readValueNT();
                 let performancePreferenceProfile: string;
 
                 if (!profile.cpu.useMaxPerfGov && this.device !== TUXEDODevice.GEMINI17I04) {
@@ -373,10 +376,9 @@ export class CpuWorker extends DaemonWorker {
             }
         }
 
-        if (this.cpuCtrl.boost.isAvailable() && scalingDriver === ScalingDriver.acpi_cpufreq) {
-            const currentBoost: boolean = this.cpuCtrl.boost.readValue();
-            //const coreMaxFreq: number = this.cpuCtrl.cores[0].cpuinfoMaxFreq.readValue();
-            const availableFreqs: number[] = this.cpuCtrl.cores[0].scalingAvailableFrequencies.readValueNT();
+        if (this.cpuCtrl.boost.isAvailable() && primaryScalingDriver === ScalingDriver.acpi_cpufreq) {
+            const currentBoost: boolean = this.cpuCtrl.boost.readValueNT();
+            const availableFreqs: number[] = this.cpuCtrl.cores[0]?.scalingAvailableFrequencies?.readValueNT();
             let maxSelectableFreq: number;
             if (availableFreqs !== undefined && availableFreqs?.length > 0) {
                 maxSelectableFreq = Math.max(...availableFreqs);
@@ -384,7 +386,7 @@ export class CpuWorker extends DaemonWorker {
 
             const maxFreqProfile: number = profile.cpu.scalingMaxFrequency;
             if (profile.cpu.useMaxPerfGov) {
-                if (!currentBoost) {
+                if (currentBoost !== true) {
                     cpuFreqValidConfig = false;
                     this.tccd.logLine('CpuWorker: Unexpected value boost => false instead of true');
                 }
@@ -392,14 +394,14 @@ export class CpuWorker extends DaemonWorker {
                 if (
                     (maxFreqProfile === undefined ||
                         (maxSelectableFreq !== undefined && maxFreqProfile > maxSelectableFreq)) &&
-                    !currentBoost
+                    currentBoost !== true
                 ) {
                     cpuFreqValidConfig = false;
                     this.tccd.logLine('CpuWorker: Unexpected value boost => false instead of true');
                 } else if (
                     (maxFreqProfile === FrequencyConfig.ReducedFrequency ||
                         (maxSelectableFreq !== undefined && maxFreqProfile <= maxSelectableFreq)) &&
-                    currentBoost
+                    currentBoost === true
                 ) {
                     cpuFreqValidConfig = false;
                     this.tccd.logLine('CpuWorker: Unexpected value boost => true instead of false');
@@ -408,7 +410,7 @@ export class CpuWorker extends DaemonWorker {
         }
 
         if (this.cpuCtrl.intelPstate.noTurbo.isAvailable() && this.cpuCtrl.intelPstate.noTurbo.isWritable()) {
-            const currentNoTurbo: boolean = this.cpuCtrl.intelPstate.noTurbo.readValue();
+            const currentNoTurbo: boolean = this.cpuCtrl.intelPstate.noTurbo.readValueNT();
             const profileNoTurbo: boolean = profile.cpu.noTurbo;
 
             if (profileNoTurbo !== undefined) {
