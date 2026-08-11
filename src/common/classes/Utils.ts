@@ -78,16 +78,10 @@ export function findClosestValue(value: number, array: number[]): number {
 // todo: check if fileOK/fileOKAsync can be put into init to avoid periodic file access
 // if errors appear after file was indeed ok but afterwards isn't, it needs error handling instead of checking status every time
 export function fileOK(path: string): boolean {
+    if (!path) return false;
     try {
-        if (fs.existsSync(path)) {
-            try {
-                fs.accessSync(path, fs.constants.F_OK | fs.constants.R_OK | fs.constants.W_OK);
-                return true;
-            } catch (_err: unknown) {
-                return false;
-            }
-        }
-        return false;
+        fs.accessSync(path, fs.constants.F_OK | fs.constants.R_OK | fs.constants.W_OK);
+        return true;
     } catch (_err: unknown) {
         return false;
     }
@@ -95,21 +89,11 @@ export function fileOK(path: string): boolean {
 
 // async file access implementation requires an error to be thrown, thus no error logging for this special case
 export async function fileOKAsync(path: string): Promise<boolean> {
+    if (!path) return false;
     try {
-        const exists: boolean = await fs.promises
-            .stat(path)
-            .then((): boolean => true)
-            .catch((): boolean => false);
-
-        if (exists) {
-            return await fs.promises
-                .access(path, fs.constants.F_OK | fs.constants.R_OK | fs.constants.W_OK)
-                .then((): boolean => true)
-                .catch((): boolean => false);
-        }
-        return false;
-    } catch (err: unknown) {
-        console.error(`Utils: fileOKAsync failed => ${err}`);
+        await fs.promises.access(path, fs.constants.F_OK | fs.constants.R_OK | fs.constants.W_OK);
+        return true;
+    } catch (_err: unknown) {
         return false;
     }
 }
