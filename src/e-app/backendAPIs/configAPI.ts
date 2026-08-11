@@ -48,7 +48,7 @@ async function pkexecWriteCustomProfilesAsync(newProfileList: ITccProfile[]): Pr
     }
 
     try {
-        await execFile(`pkexec ${tccdExec} --new_profiles ${tmpProfilesPath}`);
+        await execFile('pkexec', [tccdExec, '--new_profiles', tmpProfilesPath]);
         return true;
     } catch (err: unknown) {
         console.error(`configAPI: pkexecWriteCustomProfilesAsync failed => ${err}`);
@@ -71,7 +71,7 @@ function pkexecWriteCustomProfiles(profiles: ITccProfile[]): boolean {
         tccdExec = `${cwd}/dist/tuxedo-control-center/data/service/tccd`;
     }
     try {
-        execFileSync(`pkexec ${tccdExec} --new_profiles ${tmpProfilesPath}`);
+        execFileSync('pkexec', [tccdExec, '--new_profiles', tmpProfilesPath]);
         return true;
     } catch (err: unknown) {
         console.error(`configAPI: pkexecWriteCustomProfiles failed => ${err}`);
@@ -98,9 +98,13 @@ async function pkexecWriteConfigAsync(settings: ITccSettings, profiles: ITccProf
     }
 
     try {
-        const data: { data: string; error: unknown } = await execFile(
-            `pkexec ${tccdExec} --new_profiles ${tmpProfilesPath} --new_settings ${tmpSettingsPath}`,
-        );
+        const data: { data: string; error: unknown } = await execFile('pkexec', [
+            tccdExec,
+            '--new_profiles',
+            tmpProfilesPath,
+            '--new_settings',
+            tmpSettingsPath,
+        ]);
         return !data.error;
     } catch (err: unknown) {
         console.error('configAPI: pkexecWriteConfigAsync failed =>', err);
@@ -130,7 +134,7 @@ ipcMain.on(
             tccdExec = `${cwd}/dist/tuxedo-control-center/data/service/tccd`;
         }
         try {
-            await execFile(`pkexec ${tccdExec} --new_settings ${tmpSettingsPath}`);
+            await execFile('pkexec', [tccdExec, '--new_settings', tmpSettingsPath]);
         } catch (err: unknown) {
             console.error(`configAPI: config-set-active-profile failed => ${err}`);
         } finally {

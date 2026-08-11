@@ -227,17 +227,31 @@ export function execCmdSync(cmd: string): string {
     }
 }
 
-// todo: rename into execFileAsync or somehow else indicate that function is async
-export async function execFile(arg: string): Promise<{ data: string; error: unknown }> {
+export async function execFile(
+    cmdOrArg: string | string[],
+    args?: string[],
+): Promise<{ data: string; error: unknown }> {
+    let command: string;
+    let commandArgs: string[];
+
+    if (Array.isArray(cmdOrArg)) {
+        command = cmdOrArg[0];
+        commandArgs = cmdOrArg.slice(1);
+    } else if (args !== undefined) {
+        command = cmdOrArg;
+        commandArgs = args;
+    } else {
+        const cmdList: string[] = cmdOrArg.split(/\s+/).filter(Boolean);
+        command = cmdList.shift() ?? '';
+        commandArgs = cmdList;
+    }
+
     return new Promise<{ data: string; error: unknown }>(
         (
             resolve: (value: { data: string; error: unknown } | PromiseLike<{ data: string; error: unknown }>) => void,
             reject: (reason?: unknown) => void,
         ): void => {
-            const strArg: string = arg;
-            const cmdList: string[] = strArg.split(' ');
-            const cmd: string = cmdList.shift();
-            child_process.execFile(cmd, cmdList, (err: unknown, stdout: string, stderr: string): void => {
+            child_process.execFile(command, commandArgs, (err: unknown, stdout: string, stderr: string): void => {
                 if (err) {
                     reject({ data: stderr, error: err });
                 } else {
@@ -248,17 +262,31 @@ export async function execFile(arg: string): Promise<{ data: string; error: unkn
     );
 }
 
-export async function execFileSync(arg: string): Promise<unknown | string> {
-    const strArg: string = arg;
-    const cmdList: string[] = strArg.split(' ');
-    const cmd: string = cmdList.shift();
-    let data: Buffer;
+export async function execFileSync(
+    cmdOrArg: string | string[],
+    args?: string[],
+): Promise<unknown | string> {
+    let command: string;
+    let commandArgs: string[];
+
+    if (Array.isArray(cmdOrArg)) {
+        command = cmdOrArg[0];
+        commandArgs = cmdOrArg.slice(1);
+    } else if (args !== undefined) {
+        command = cmdOrArg;
+        commandArgs = args;
+    } else {
+        const cmdList: string[] = cmdOrArg.split(/\s+/).filter(Boolean);
+        command = cmdList.shift() ?? '';
+        commandArgs = cmdList;
+    }
+
     try {
-        data = child_process.execFileSync(cmd, cmdList);
+        const data: Buffer = child_process.execFileSync(command, commandArgs);
         return data.toString();
     } catch (err: unknown) {
         console.error(`utilsAPI: execFileSync failed => ${err}`);
-        return err;
+        return err instanceof Error ? err.message : String(err);
     }
 }
 

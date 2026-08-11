@@ -104,7 +104,7 @@ ipcMain.handle(
             return { data: '', error: 'Invalid state' };
         }
         try {
-            return await execFile(`pkexec prime-select ${selectedState}`);
+            return await execFile('pkexec', ['prime-select', selectedState]);
         } catch (err: unknown) {
             console.error(`powerAPI: prime-select failed => ${err}`);
             return { data: '', error: err };
