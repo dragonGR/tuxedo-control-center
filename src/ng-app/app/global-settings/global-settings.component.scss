@@ -26,62 +26,103 @@
     left: 0px;
     margin: 0px;
     padding: 0px;
-    overflow-y: scroll;
+    overflow-y: auto;
 
     .inner-global-settings {
-        margin: 0 10px 10px 10px;
+        margin: 0 12px 16px 12px;
 
-        .title {
-            font-size: 24px;
+        .card-global-settings {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(150, 150, 150, 0.02) 100%);
+            border-radius: 16px !important;
+            padding: 24px;
+            margin-bottom: 20px;
+
+            .title {
+                font-size: 24px;
+                font-weight: 600;
+                letter-spacing: -0.02em;
+            }
+
+            .description {
+                font-size: 15px;
+                line-height: 1.5;
+                opacity: 0.85;
+                padding-top: 12px;
+                padding-bottom: 4px;
+                text-align: center;
+            }
         }
 
         .panel-title {
             font-size: 18px;
-        }
-
-        .description {
-            font-size: 16px;
-
-            padding-top: 16px;
-            padding-bottom: 16px;
-            text-align: center;
+            font-weight: 600;
+            letter-spacing: -0.01em;
         }
 
         .content {
+            padding: 12px 4px;
+
+            mat-grid-list {
+                margin-top: 8px;
+                align-items: center;
+            }
+
             .description {
-                font-size: 16px;
+                font-size: 14px;
+                line-height: 1.45;
                 text-align: left;
-                padding-top: 0px;
-                font-style: oblique;
+                padding: 4px 0 16px 0;
+                opacity: 0.75;
+
+                strong {
+                    color: var(--text-color);
+                }
             }
 
             .input {
                 flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
             }
 
             .header {
                 width: 100%;
                 text-align: left;
                 font-size: 16px;
-                font-weight: bold;
+                font-weight: 600;
             }
 
             .value {
                 width: 100%;
                 text-align: left;
-                font-weight: bold;
-                font-size: 16px;
+                font-size: 14px;
+
+                span {
+                    display: inline-block;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-weight: 600;
+                    letter-spacing: 0.02em;
+                    background: rgba(150, 150, 150, 0.12);
+                    color: var(--text-color);
+                    text-transform: capitalize;
+
+                    &:not([hidden]) {
+                        animation: fadeIn 0.2s ease;
+                    }
+                }
             }
         }
     }
 }
 
 .margin-top {
-    margin-top: 0.8rem;
+    margin-top: 1rem;
 }
 
 .margin-bottom {
-    margin-bottom: 0.8rem;
+    margin-bottom: 1rem;
 }
 
 .margin-left {
@@ -90,9 +131,31 @@
 
 .theme-settings-content {
     display: flex;
-    justify-content: space-around;
-    margin-bottom: 16px;
-    margin-top: 16px;
+    justify-content: center;
+    padding: 20px 16px;
+
+    mat-button-toggle-group {
+        border-radius: 30px !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        background: rgba(150, 150, 150, 0.05);
+        padding: 4px;
+
+        mat-button-toggle {
+            border-radius: 24px !important;
+            border: none !important;
+            padding: 4px 20px;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+            &.mat-button-toggle-checked {
+                background: var(--icon-detail) !important;
+                color: #ffffff !important;
+                box-shadow: 0 4px 14px rgba(227, 0, 22, 0.3);
+                font-weight: 600;
+            }
+        }
+    }
 }
 
 .hide {

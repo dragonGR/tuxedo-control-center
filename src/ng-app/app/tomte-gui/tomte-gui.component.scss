@@ -45,6 +45,8 @@
 
             .tomte-list-output-table {
                 width: 100%;
+                border-radius: 12px;
+                overflow: hidden;
 
                 mat-icon {
                     height: 100%;
@@ -57,11 +59,14 @@
 
                 th,
                 td {
-                    font-size: 16px;
+                    font-size: 15px;
                     text-align: center;
+                    padding: 12px 16px;
                 }
                 th {
-                    font-size: large;
+                    font-size: 16px;
+                    font-weight: 600;
+                    background-color: rgba(150, 150, 150, 0.05);
                 }
             }
         }

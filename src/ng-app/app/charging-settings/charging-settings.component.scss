@@ -19,48 +19,68 @@
 
 .charging-group-label {
     display: block;
-    font-size: 16px;
-    font-weight: bolder;
-    padding-top: 20px;
+    font-size: 17px;
+    font-weight: 600;
+    padding-top: 24px;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
 }
 
 .charging-radio-group {
     display: flex;
     flex-direction: column;
-    padding-top: 16px;
-    align-items: flex-start;
+    gap: 10px;
+    padding-top: 12px;
+    width: 100%;
 
-    .header-text {
-        font-size: 16px;
-        font-weight: bold;
-    }
-    .content-text {
-        font-size: 16px;
+    mat-radio-button {
+        width: 100%;
+        margin: 0;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(150, 150, 150, 0.03);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+        &:hover {
+            border-color: rgba(255, 255, 255, 0.18);
+            background: rgba(150, 150, 150, 0.06);
+            transform: translateX(2px);
+        }
+
+        &.mat-mdc-radio-checked {
+            border-color: var(--icon-detail);
+            background: rgba(227, 0, 22, 0.05);
+        }
     }
 
     .radio-text {
-        padding-top: 16px;
-        padding-bottom: 16px;
+        padding-top: 4px;
+        padding-bottom: 4px;
 
         .radio-title {
             font-size: 16px;
-            font-weight: bold;
+            font-weight: 600;
+            margin-bottom: 2px;
         }
 
         .radio-description {
-            font-size: 16px;
+            font-size: 14px;
+            opacity: 0.8;
+            line-height: 1.4;
         }
     }
 }
 
 .charging-profile-note {
-    font-size: 16px;
-    padding-top: 16px;
-
-    display: flex;
-    flex-flow: row nowrap;
-    justify-content: flex-start;
-    align-items: center;
+    font-size: 14px;
+    line-height: 1.45;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    background: rgba(255, 193, 7, 0.08);
+    border-left: 4px solid #ffc107;
+    border-radius: 8px;
+    color: var(--text-color);
 }
 
 .info-icon-link {

@@ -278,9 +278,25 @@ mat-tab-group.active-always-focused {
     (
         supporting-text-size: 16px,
         supporting-text-color: var(--text-color),
-        with-actions-content-padding: 20px 24px 5px,
+        with-actions-content-padding: 20px 24px 12px,
+        container-shape: 18px,
     )
 );
+
+.cdk-overlay-backdrop.cdk-overlay-dark-backdrop,
+.cdk-overlay-backdrop {
+    background: rgba(0, 0, 0, 0.45) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: opacity 0.25s ease, backdrop-filter 0.25s ease;
+}
+
+.mat-mdc-dialog-surface {
+    border-radius: 18px !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    background-color: var(--foreground-color) !important;
+}
 
 @include mat.button-overrides(
     (

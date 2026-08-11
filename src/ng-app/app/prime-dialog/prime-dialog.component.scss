@@ -45,11 +45,13 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    margin-top: auto;
-}
+    gap: 8px;
+    margin-top: 16px;
 
-button {
-    margin-left: 8px;
+    button {
+        border-radius: 8px;
+        font-weight: 500;
+    }
 }
 
 .mat-mdc-progress-bar {
