@@ -23,6 +23,7 @@
 
 @use './app/profile-overview-tile/profile-overview-tile.component-theme.scss';
 @use './app/profile-details-edit/profile-details-edit.component-theme.scss';
+@use './assets/fonts/material-icons.css';
 @use './tcc-gauge-theme.scss';
 @use './tcc-changelog-theme.scss';
 @use './tcc-charts-theme.scss';
@@ -35,10 +36,38 @@
     visibility: hidden !important;
 }
 
+html {
+    color-scheme: light dark;
+    scroll-behavior: smooth;
+}
+
 body {
     margin: 0;
     padding: 0;
     height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Custom sleek scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(120, 120, 120, 0.25);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(150, 150, 150, 0.45);
 }
 
 .blur-no-input {

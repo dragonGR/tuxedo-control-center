@@ -23,11 +23,23 @@
 
     height: 100%;
     width: 225px;
-    padding: 10px;
-    padding-top: 0px;
-    padding-bottom: 15px;
+    padding: 12px 16px 18px 16px;
 
-    border-radius: 15px;
+    border-radius: 16px !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &.hover-effect:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+        border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    &.tile-active {
+        border-color: var(--icon-detail) !important;
+        box-shadow: 0 4px 20px rgba(227, 0, 22, 0.15) !important;
+    }
 
     hr {
         opacity: 0.2;
@@ -37,16 +49,16 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-
-        margin-bottom: 5px;
+        margin-bottom: 8px;
 
         .profile-name {
-            font-size: 20px;
-            font-weight: bold;
+            font-size: 19px;
+            font-weight: 600;
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
             margin: auto;
+            letter-spacing: -0.01em;
         }
     }
 
@@ -57,17 +69,24 @@
 
         .description {
             height: 100%;
-            min-height: 120px;
+            min-height: 110px;
             text-align: center;
             overflow: hidden;
             text-overflow: ellipsis;
+            font-size: 0.95rem;
+            opacity: 0.85;
+            line-height: 1.4;
         }
     }
 
     .profile-icon {
-        width: 80px;
-        margin: auto;
-        margin-bottom: 5px;
+        width: 72px;
+        margin: 4px auto 8px auto;
+        transition: transform 0.2s ease;
+    }
+
+    &:hover .profile-icon {
+        transform: scale(1.05);
     }
 
     .state-status-icons {
@@ -88,29 +107,34 @@
         }
 
         mat-icon {
-            font-size: 30px;
+            font-size: 26px;
         }
 
         .group-right {
             display: flex;
             flex-flow: row nowrap;
             align-items: center;
+            gap: 4px;
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
 
-            opacity: 0.3;
+            &:hover {
+                opacity: 1;
+            }
         }
     }
 
     .status-flexbox {
         display: block;
-        margin-top: 20px;
+        margin-top: 16px;
 
         .status-component {
             display: flex;
             align-items: center;
 
             .status-icon-container {
-                width: 48px;
-                height: 48px;
+                width: 44px;
+                height: 44px;
                 svg {
                     width: inherit;
                     height: inherit;
@@ -120,7 +144,7 @@
             }
 
             &.inactive {
-                opacity: 0.3;
+                opacity: 0.35;
             }
         }
     }

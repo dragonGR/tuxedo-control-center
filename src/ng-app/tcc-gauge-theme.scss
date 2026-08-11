@@ -21,6 +21,11 @@
     position: relative;
     width: 180px;
     height: 180px;
+    transition: transform 0.25s ease, filter 0.25s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+    }
 
     mwl-gauge {
         position: absolute;
@@ -31,16 +36,19 @@
         height: 100%;
 
         .dial {
-            stroke-width: 3px;
+            stroke-width: 4px;
             stroke: var(--gauge-legend-color);
+            opacity: 0.85;
         }
 
         .value {
             transform-origin: center;
-            stroke-width: 3px;
+            stroke-width: 4px;
             stroke: var(--gauge-red);
-            opacity: 0.7;
+            opacity: 0.9;
             stroke-linecap: round;
+            filter: drop-shadow(0 0 3px rgba(226, 33, 49, 0.4));
+            transition: stroke-dasharray 0.3s ease;
         }
     }
 
@@ -55,6 +63,8 @@
         width: 100%;
         text-align: center;
         font-size: 3.2em;
+        font-weight: 600;
+        letter-spacing: -0.02em;
     }
 
     &.not-available .custom-value-text {
@@ -67,11 +77,11 @@
         bottom: 43px;
         left: 0;
         width: 100%;
-
         text-align: center;
-
         color: var(--gauge-metric-text-color);
-        font-weight: bold;
+        font-weight: 600;
+        font-size: 0.95rem;
+        letter-spacing: 0.02em;
     }
 
     .icon {
@@ -80,9 +90,9 @@
         left: 0;
         width: 100%;
         height: 35px;
-
         color: var(--gauge-icon-color);
         --icon-detail: var(--icon-main);
+        transition: opacity 0.2s ease;
     }
 
     .legend {
@@ -102,9 +112,8 @@
         background-color: var(--gauge-legend-color);
         opacity: 1;
 
-        border-width: 5px;
-        border-style: solid;
-        border-color: var(--foreground-color);
+        border: 3px solid var(--foreground-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 
         .text {
             white-space: nowrap;
@@ -115,10 +124,11 @@
             margin-right: 10px;
 
             color: var(--gauge-legend-text-color);
-            font-weight: bold;
+            font-weight: 600;
+            font-size: 0.85rem;
 
             &.small {
-                transform: scale(1.2);
+                transform: scale(1.1);
             }
         }
     }

@@ -22,7 +22,7 @@
 }
 
 .title-row {
-    height: 40px;
+    height: 44px;
     -webkit-app-region: drag;
     display: flex;
     justify-content: space-between;
@@ -30,6 +30,7 @@
     align-items: center;
 
     background-color: var(--foreground-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 
     #title-left {
         display: flex;
@@ -38,21 +39,35 @@
 
         #title-logo {
             height: 26px;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
         }
 
         #title-text {
-            font-size: 16px;
-            margin-left: 16px;
+            font-size: 15px;
+            font-weight: 600;
+            margin-left: 14px;
             color: var(--text-color);
+            letter-spacing: 0.01em;
         }
     }
 
     #title-right {
         -webkit-app-region: no-drag;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
         svg {
             width: 14px;
-            margin-left: 16px;
+            height: 14px;
             cursor: pointer;
+            opacity: 0.75;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+
+            &:hover {
+                opacity: 1;
+                transform: scale(1.1);
+            }
         }
     }
 }
@@ -61,20 +76,36 @@
     height: 100% !important;
 
     .selected {
-        font-weight: bold;
+        font-weight: 600;
     }
 
     mat-icon {
         transform-origin: center left;
-        transform: scale(2);
+        transform: scale(1.8);
+        transition: transform 0.2s ease;
     }
 }
 
 .main-sidenav-nav {
     --sidenav-width: 240px;
     width: var(--sidenav-width);
-    // height: 100%;
-    margin-top: 10px;
+    margin-top: 6px;
+    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+
+    mat-list-item {
+        margin: 3px 8px;
+        border-radius: 10px !important;
+        transition: background-color 0.2s ease, transform 0.15s ease;
+
+        &:hover {
+            background-color: rgba(150, 150, 150, 0.08);
+        }
+
+        &.active, &[routerlinkactive="true"].active-link {
+            background-color: rgba(227, 0, 22, 0.12);
+            border-left: 3px solid var(--icon-detail);
+        }
+    }
 
     .sidenav-top {
         mat-list-item {
@@ -88,6 +119,7 @@
                     text-overflow: ellipsis;
                     white-space: nowrap;
                     overflow: hidden;
+                    font-size: 0.95rem;
                 }
             }
         }
@@ -98,17 +130,18 @@
         position: absolute;
         bottom: 0px;
         overflow: hidden;
-
         display: flex;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
 
         mat-nav-list {
             flex: 50%;
-
             padding: 0px;
 
             mat-list-item {
-                width: var(--sidenav-width) / 2;
-                height: 60px;
+                width: calc(var(--sidenav-width) / 2 - 16px);
+                height: 56px;
+                margin: 4px 8px;
+
                 content {
                     width: 100%;
                     height: 85%;
@@ -116,11 +149,12 @@
                     flex-direction: column;
                     justify-content: space-between;
                     align-items: center;
+                    font-size: 0.85rem;
 
                     mat-icon {
                         padding-top: 3%;
                         transform-origin: center center;
-                        transform: scale(2);
+                        transform: scale(1.6);
                     }
                 }
             }
@@ -129,7 +163,7 @@
 }
 
 .main-sidenav-content {
-    padding: 10px;
+    padding: 14px 18px;
     margin: 0;
     overflow-y: auto;
 }
