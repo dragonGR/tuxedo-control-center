@@ -46,10 +46,12 @@ export class TccDBusController {
         try {
             const proxyObject = await this.bus.getProxyObject(this.busName, this.path);
             this.interface = proxyObject.getInterface(this.interfaceName);
+            this.dbusStatus = true;
             return true;
         } catch (err: unknown) {
             console.error(`dbusController: init failed => ${err}`);
-            app.exit(0);
+            this.interface = undefined;
+            this.dbusStatus = false;
             return false;
         }
     }
