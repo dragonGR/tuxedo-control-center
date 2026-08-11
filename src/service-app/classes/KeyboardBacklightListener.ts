@@ -43,6 +43,19 @@ export class KeyboardBacklightListener {
     protected onStartRetryCount: number = 5;
     private isLidClosed: boolean = false;
     private writeSettingsTimeout: NodeJS.Timeout = undefined;
+    private fsWatchers: fs.FSWatcher[] = [];
+    private isUpdatingFromSysfs: boolean = false;
+
+    private cleanupFSWatchers(): void {
+        for (const watcher of this.fsWatchers) {
+            try {
+                watcher.close();
+            } catch (_err) {
+                // Ignore close errors
+            }
+        }
+        this.fsWatchers = [];
+    }
 
     private debouncedWriteSettings(): void {
         if (this.writeSettingsTimeout) {
@@ -194,38 +207,48 @@ export class KeyboardBacklightListener {
     }
 
     private async initSysFSListener(): Promise<void> {
+        this.cleanupFSWatchers();
+
         if (this.keyboardBacklightCapabilities.maxRed !== undefined) {
             for (let i: number = 0; i < this.ledsRGBZones?.length; ++i) {
-                if (this.ledsRGBZones[i]) {
-                    if (await fileOKAsync(`${this.ledsRGBZones[i]}/multi_intensity`)) {
-                        (function (i: number): void {
-                            fs.watch(
-                                `${this.ledsRGBZones[i]}/multi_intensity`,
-                                async function (): Promise<void> {
-                                    if (!this.isLidClosed) {
-                                        const keyboardBacklightStatesNew: Array<KeyboardBacklightStateInterface> =
-                                            this.tccd.settings.keyboardBacklightStates;
-                                        const colors: number[] = (
-                                            await fs.promises.readFile(`${this.ledsRGBZones[i]}/multi_intensity`)
-                                        )
-                                            .toString()
-                                            .split(' ')
-                                            .map(Number);
-                                        if (keyboardBacklightStatesNew?.[i] && colors) {
-                                            keyboardBacklightStatesNew[i].red = colors[0];
-                                            keyboardBacklightStatesNew[i].green = colors[1];
-                                            keyboardBacklightStatesNew[i].blue = colors[2];
-                                            this.setKeyboardBacklightStates(
-                                                keyboardBacklightStatesNew,
-                                                false,
-                                                true,
-                                                true,
-                                            );
-                                        }
+                if (this.ledsRGBZones[i] && (await fileOKAsync(`${this.ledsRGBZones[i]}/multi_intensity`))) {
+                    try {
+                        const watcher = fs.watch(
+                            `${this.ledsRGBZones[i]}/multi_intensity`,
+                            async (): Promise<void> => {
+                                if (this.isLidClosed || this.isUpdatingFromSysfs) return;
+
+                                try {
+                                    const content = await fs.promises.readFile(
+                                        `${this.ledsRGBZones[i]}/multi_intensity`,
+                                        'utf8',
+                                    );
+                                    const colors: number[] = content.trim().split(' ').map(Number);
+                                    const states: Array<KeyboardBacklightStateInterface> =
+                                        this.tccd.settings.keyboardBacklightStates;
+
+                                    if (states?.[i] && colors.length >= 3 && !colors.some(Number.isNaN)) {
+                                        states[i].red = colors[0];
+                                        states[i].green = colors[1];
+                                        states[i].blue = colors[2];
+
+                                        this.isUpdatingFromSysfs = true;
+                                        await this.setKeyboardBacklightStates(states, false, true, true);
                                     }
-                                }.bind(this),
-                            );
-                        }).bind(this)(i);
+                                } catch (err: unknown) {
+                                    console.error(
+                                        `KeyboardBacklightListener: Failed reading zone ${i} intensity => ${err}`,
+                                    );
+                                } finally {
+                                    this.isUpdatingFromSysfs = false;
+                                }
+                            },
+                        );
+                        this.fsWatchers.push(watcher);
+                    } catch (err: unknown) {
+                        console.error(
+                            `KeyboardBacklightListener: Failed setting watcher for zone ${i} => ${err}`,
+                        );
                     }
                 }
             }
