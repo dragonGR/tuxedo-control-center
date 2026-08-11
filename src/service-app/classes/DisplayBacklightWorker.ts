@@ -25,6 +25,7 @@ import type { TuxedoControlCenterDaemon } from './TuxedoControlCenterDaemon';
 export class DisplayBacklightWorker extends DaemonWorker {
     private controllers: DisplayBacklightController[];
     private basePath: string = '/sys/class/backlight';
+    private recheckTimer: NodeJS.Timeout | undefined;
 
     constructor(tccd: TuxedoControlCenterDaemon) {
         super(3000, 'DisplayBacklightWorker', tccd);
@@ -42,23 +43,34 @@ export class DisplayBacklightWorker extends DaemonWorker {
     }
 
     public async onStart(): Promise<void> {
+        if (this.recheckTimer) {
+            clearTimeout(this.recheckTimer);
+            this.recheckTimer = undefined;
+        }
+
         const currentProfile: ITccProfile = this.activeProfile;
 
-        if (currentProfile.display.useBrightness && currentProfile.display.brightness !== undefined) {
+        if (currentProfile?.display?.useBrightness && currentProfile.display.brightness !== undefined) {
             const brightnessPercent: number = currentProfile.display.brightness;
             this.writeBrightness(brightnessPercent);
 
             // Recheck workaround for late loaded drivers and drivers that are not ready although
             // already presenting an interface
-            setTimeout((): void => {
+            this.recheckTimer = setTimeout((): void => {
                 this.writeBrightness(brightnessPercent, true);
+                this.recheckTimer = undefined;
             }, 2000);
         }
     }
 
     public async onWork(): Promise<void> {}
 
-    public async onExit(): Promise<void> {}
+    public async onExit(): Promise<void> {
+        if (this.recheckTimer) {
+            clearTimeout(this.recheckTimer);
+            this.recheckTimer = undefined;
+        }
+    }
 
     private writeBrightness(brightnessPercent: number, recheck?: boolean): void {
         this.findDrivers();
