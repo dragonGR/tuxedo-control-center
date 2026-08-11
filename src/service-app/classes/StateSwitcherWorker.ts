@@ -120,7 +120,7 @@ export class StateSwitcherWorker extends DaemonWorker {
         if (oldActiveProfileId !== this.tccd.activeProfile.id || this.refreshProfile) {
             this.refreshProfile = false;
             this.tccd.updateDBusActiveProfileData();
-            this.tccd.startWorkers();
+            await this.tccd.startWorkers();
         }
     }
 
