@@ -229,10 +229,8 @@ export class ConfigHandler {
     ): Promise<void> {
         const fileData: string = JSON.stringify(config);
         try {
-            const dirStat: fs.Stats = await fs.promises.stat(path.dirname(filePath));
-            if (!dirStat.isDirectory()) {
-                await fs.promises.mkdir(path.dirname(filePath), { mode: 0o755, recursive: true });
-            }
+            const dirPath: string = path.dirname(filePath);
+            await fs.promises.mkdir(dirPath, { mode: 0o755, recursive: true });
             await fs.promises.writeFile(filePath, fileData, writeFileOptions);
         } catch (err: unknown) {
             console.error(`ConfigHandler: writeConfigAsync failed => ${err}`);
