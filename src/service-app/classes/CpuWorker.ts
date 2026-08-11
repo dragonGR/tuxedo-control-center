@@ -101,8 +101,12 @@ export class CpuWorker extends DaemonWorker {
     public findDefaultGovernor(): string {
         let chosenName: string;
         try {
+            if (!this.cpuCtrl.cores || this.cpuCtrl.cores.length === 0) {
+                console.warn('CpuWorker: No logical CPU cores available for governor selection');
+                return 'powersave';
+            }
             let scalingDriver: string;
-            if (this.cpuCtrl.cores[0].scalingDriver.isAvailable()) {
+            if (this.cpuCtrl.cores[0].scalingDriver?.isAvailable()) {
                 scalingDriver = this.cpuCtrl.cores[0].scalingDriver.readValueNT();
             }
 
@@ -117,18 +121,18 @@ export class CpuWorker extends DaemonWorker {
                 // Preferred governors list for other drivers, mainly 'acpi-cpufreq'.
                 // Also includes 'intel_cpufreq' which according to kernel.org doc on intel_pstate
                 // behaves as the acpi-cpufreq governors.
-                const availableGovernors: string[] = this.cpuCtrl.cores[0].scalingAvailableGovernors.readValue();
+                const availableGovernors: string[] = this.cpuCtrl.cores[0].scalingAvailableGovernors?.readValue() ?? [];
                 for (const governorName of this.preferredAcpiFreqGovernors) {
                     if (availableGovernors.includes(governorName)) {
                         chosenName = governorName;
                         break;
                     }
                 }
-                return chosenName;
+                return chosenName ?? availableGovernors[0] ?? 'powersave';
             }
         } catch (err: unknown) {
             console.error(`CpuWorker: findDefaultGovernor failed => ${err}`);
-            return chosenName;
+            return chosenName ?? 'powersave';
         }
     }
 
@@ -140,8 +144,12 @@ export class CpuWorker extends DaemonWorker {
     public findPerformanceGovernor(): string {
         let chosenName: string;
         try {
+            if (!this.cpuCtrl.cores || this.cpuCtrl.cores.length === 0) {
+                console.warn('CpuWorker: No logical CPU cores available for performance governor selection');
+                return 'performance';
+            }
             let scalingDriver: string;
-            if (this.cpuCtrl.cores[0].scalingDriver.isAvailable()) {
+            if (this.cpuCtrl.cores[0].scalingDriver?.isAvailable()) {
                 scalingDriver = this.cpuCtrl.cores[0].scalingDriver.readValueNT();
             }
 
@@ -156,18 +164,18 @@ export class CpuWorker extends DaemonWorker {
                 // Preferred governors list for other drivers, mainly 'acpi-cpufreq'.
                 // Also includes 'intel_cpufreq' which according to kernel.org doc on intel_pstate
                 // behaves as the acpi-cpufreq governors.
-                const availableGovernors: string[] = this.cpuCtrl.cores[0].scalingAvailableGovernors.readValue();
+                const availableGovernors: string[] = this.cpuCtrl.cores[0].scalingAvailableGovernors?.readValue() ?? [];
                 for (const governorName of this.preferredPerformanceAcpiFreqGovernors) {
                     if (availableGovernors.includes(governorName)) {
                         chosenName = governorName;
                         break;
                     }
                 }
-                return chosenName;
+                return chosenName ?? availableGovernors[0] ?? 'performance';
             }
         } catch (err: unknown) {
             console.error(`CpuWorker: findPerformanceGovernor failed => ${err}`);
-            return chosenName;
+            return chosenName ?? 'performance';
         }
     }
 

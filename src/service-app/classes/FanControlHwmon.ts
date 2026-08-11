@@ -344,7 +344,7 @@ export class FanControlHwmon extends FanControlBaseClass {
             }
         } catch (err: unknown) {
             console.error(`FanControlHwmon: getNumberTemp failed => ${err}`);
-            return;
+            return 0;
         }
     }
 
