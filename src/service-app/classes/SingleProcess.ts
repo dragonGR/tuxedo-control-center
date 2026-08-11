@@ -128,19 +128,29 @@ export class SingleProcess {
      * @returns True if PID file is found and process is running, false otherwise
      */
     private isRunning(): boolean {
-        let isRunning: boolean = true;
-
         const intPid: number = this.readPid();
-        if (Number.isNaN(intPid)) {
-            isRunning = false;
-        } else {
-            try {
-                return fs.existsSync(`/proc/${intPid}`);
-            } catch (err: unknown) {
-                console.error(`SingleProcess: isRunning failed => ${err}`);
-                isRunning = false;
-            }
+        if (Number.isNaN(intPid) || intPid <= 0) {
+            return false;
         }
-        return isRunning;
+
+        try {
+            process.kill(intPid, 0);
+        } catch (err: unknown) {
+            const sysErr = err as NodeJS.ErrnoException;
+            if (sysErr?.code === 'ESRCH') {
+                return false;
+            }
+            if (sysErr?.code === 'EPERM') {
+                return true;
+            }
+            return false;
+        }
+
+        try {
+            const cmdline: string = fs.readFileSync(`/proc/${intPid}/cmdline`, 'utf8');
+            return cmdline.includes('tccd') || cmdline.includes('node');
+        } catch (_err: unknown) {
+            return false;
+        }
     }
 }
