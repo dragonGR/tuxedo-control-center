@@ -370,10 +370,7 @@ export class TccDBusClientService implements OnDestroy {
 
             // Retrieve and parse profiles
             const activeProfileJSON: string = await window.dbusAPI.getActiveProfileJSON();
-            if (activeProfileJSON !== undefined) {
-                if (activeProfileJSON === undefined) {
-                    console.log('tcc-dbus-client: dbusUpdate: unexpected error => no active profile');
-                }
+            if (activeProfileJSON) {
                 try {
                     const activeProfile: TccProfile = JSON.parse(activeProfileJSON);
                     if (this.previousActiveProfileJSON !== activeProfileJSON) {
@@ -384,6 +381,8 @@ export class TccDBusClientService implements OnDestroy {
                 } catch (err: unknown) {
                     console.error(`tcc-dbus-client: dbusUpdate: unexpected error parsing profile => ${err}`);
                 }
+            } else {
+                console.log('tcc-dbus-client: dbusUpdate: unexpected error => no active profile');
             }
 
             const defaultProfilesJSON: string = await window.dbusAPI.getDefaultProfilesJSON();
