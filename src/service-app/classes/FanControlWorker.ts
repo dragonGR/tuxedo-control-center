@@ -209,7 +209,7 @@ export class FanControlWorker extends DaemonWorker {
         if (fanApiUnavailable && this.retryFanInitCounter > 0) {
             console.log('FanControlWorker: checkFanApiAvailable: Fan API not defined, retrying initialization');
             this.retryFanInitCounter = this.retryFanInitCounter - 1;
-            this.onStart(true);
+            await this.onStart(true);
             return;
         }
 
@@ -364,37 +364,42 @@ export class FanControlWorker extends DaemonWorker {
     }
 
     private async setFanDbusData(fanIndex: number, currentFanTemp: number, currentSpeedPercent: number): Promise<void> {
-        this.dbusData.fans[fanIndex].temp = {
-            timestamp: Date.now(),
-            temp: currentFanTemp,
-        };
-        this.dbusData.fans[fanIndex].speed = {
-            timestamp: Date.now(),
-            speed: currentSpeedPercent,
+        if (fanIndex < 0) return;
+
+        while (this.dbusData.fans.length <= fanIndex) {
+            this.dbusData.fans.push({
+                temp: { timestamp: -1, temp: -1 },
+                speed: { timestamp: -1, speed: -1 },
+            });
+        }
+
+        const now: number = Date.now();
+        this.dbusData.fans[fanIndex] = {
+            temp: {
+                timestamp: now,
+                temp: currentFanTemp,
+            },
+            speed: {
+                timestamp: now,
+                speed: currentSpeedPercent,
+            },
         };
         this.updateDbusData();
     }
 
     private updateDbusData(): void {
-        const cpu = new FanData(
-            this.dbusData.fans[0].temp.timestamp,
-            this.dbusData.fans[0].speed.speed,
-            this.dbusData.fans[0].temp.temp,
-        );
-        const gpu1 = new FanData(
-            this.dbusData.fans[1].temp.timestamp,
-            this.dbusData.fans[1].speed.speed,
-            this.dbusData.fans[1].temp.temp,
-        );
-        const gpu2 = new FanData(
-            this.dbusData.fans[2].temp.timestamp,
-            this.dbusData.fans[2].speed.speed,
-            this.dbusData.fans[2].temp.temp,
-        );
+        const getFanData = (index: number): FanData => {
+            const entry = this.dbusData.fans[index];
+            if (!entry) {
+                return new FanData();
+            }
+            return new FanData(entry.temp.timestamp, entry.speed.speed, entry.temp.temp);
+        };
+
         const fanData: { cpu: FanData; gpu1: FanData; gpu2: FanData } = {
-            cpu: cpu,
-            gpu1: gpu1,
-            gpu2: gpu2,
+            cpu: getFanData(0),
+            gpu1: getFanData(1),
+            gpu2: getFanData(2),
         };
         this.tccd.dbusData.fanData = JSON.stringify(fanData);
     }
